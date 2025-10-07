@@ -15,7 +15,7 @@ def get_active_window_title():
     try:
         active_window = gw.getActiveWindow()
 
-        # If no window is active (common when on the desktop)ggfggfs
+        # If no window is active (common when on the desktop)
         if active_window is None:
             return "Desktop"
 
