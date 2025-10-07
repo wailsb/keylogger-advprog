@@ -24,3 +24,59 @@
 --- Window changed to: [keylog.txt - keylogger-advprog - Visual Studio Code] at 2025-10-07 13:42:32 ---
 [2025-10-07 13:42:32] Key: f
 [2025-10-07 13:42:34] Key: d
+
+--- Window changed to: [keylog.py - keylogger-advprog - Visual Studio Code] at 2025-10-07 13:48:29 ---
+[2025-10-07 13:48:29] Key: d
+[2025-10-07 13:48:29] Key: o
+[2025-10-07 13:48:29] Key: k
+[2025-10-07 13:48:29] Key: a
+[2025-10-07 13:48:30] Special: Key.space
+[2025-10-07 13:48:30] Key: i
+[2025-10-07 13:48:30] Key: t
+[2025-10-07 13:48:31] Special: Key.space
+[2025-10-07 13:48:31] Key: s
+[2025-10-07 13:48:32] Key: t
+[2025-10-07 13:48:32] Key: a
+[2025-10-07 13:48:32] Key: r
+[2025-10-07 13:48:32] Key: t
+[2025-10-07 13:48:32] Key: e
+[2025-10-07 13:48:32] Key: d
+[2025-10-07 13:48:34] Special: Key.space
+[2025-10-07 13:48:34] Key: n
+[2025-10-07 13:48:35] Key: r
+[2025-10-07 13:48:35] Key: m
+[2025-10-07 13:48:35] Key: l
+[2025-10-07 13:48:36] Key: m
+[2025-10-07 13:48:36] Key: n
+[2025-10-07 13:48:36] Key: t
+
+--- Window changed to: [Google Gemini - Brave] at 2025-10-07 13:50:17 ---
+[2025-10-07 13:50:17] Key: t
+[2025-10-07 13:50:17] Key: h
+[2025-10-07 13:50:17] Key: a
+[2025-10-07 13:50:17] Key: n
+[2025-10-07 13:50:17] Key: k
+[2025-10-07 13:50:18] Special: Key.space
+[2025-10-07 13:50:18] Key: y
+[2025-10-07 13:50:18] Key: o
+[2025-10-07 13:50:18] Key: u
+[2025-10-07 13:50:18] Special: Key.space
+[2025-10-07 13:50:19] Key: o
+[2025-10-07 13:50:19] Key: s
+[2025-10-07 13:50:19] Special: Key.backspace
+[2025-10-07 13:50:19] Special: Key.backspace
+[2025-10-07 13:50:19] Key: s
+[2025-10-07 13:50:19] Key: o
+[2025-10-07 13:50:20] Special: Key.space
+[2025-10-07 13:50:20] Key: m
+[2025-10-07 13:50:20] Key: u
+[2025-10-07 13:50:20] Key: c
+[2025-10-07 13:50:20] Key: j
+[2025-10-07 13:50:21] Special: Key.backspace
+[2025-10-07 13:50:21] Key: l
+[2025-10-07 13:50:21] Special: Key.backspace
+[2025-10-07 13:50:22] Key: h
+[2025-10-07 13:50:22] Special: Key.enter
+
+--- Window changed to: [keylog.py - keylogger-advprog - Visual Studio Code] at 2025-10-07 13:50:33 ---
+[2025-10-07 13:50:33] Special: Key.esc
