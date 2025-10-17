@@ -1,1 +1,2 @@
-venv/
+log_service_pb2.py
+log_service_pb2_grpc.py
