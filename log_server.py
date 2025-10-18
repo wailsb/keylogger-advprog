@@ -21,12 +21,12 @@ class LogServiceServicer(logservice_pb2_grpc.LogServiceServicer):
 
 
 def serve():
-    # Creating a gRPC server using a "ThreadPoolExecutor"
-    server = grpc.server(ThreadPoolExecutor(max_workers=10))
+    # Creating a gRPC server
+    server = grpc.server([])
     # Adding the implemented service to the server
     logservice_pb2_grpc.add_LogServiceServicer_to_server(LogServiceServicer(), server)
 
-    server_address = '[::]:50051'
+    server_address = '[::]:50051' # 50051 is the standard gRPC port
     server.add_insecure_port(server_address)
     server.start()
     server.wait_for_termination()
