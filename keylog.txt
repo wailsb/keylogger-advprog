@@ -209,3 +209,56 @@
 [2025-11-24 08:55:14] Key: j
 [2025-11-24 08:55:14] Key: j
 [2025-11-24 08:55:14] Key: k
+
+--- Window changed to: [Desktop] at 2025-11-24 09:00:59 ---
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: v
+[2025-11-24 09:00:59] Key: g
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Key: h
+[2025-11-24 09:01:04] Key: u
+[2025-11-24 09:01:04] Key: j
+[2025-11-24 09:01:05] Key: y
+[2025-11-24 09:01:05] Key: t
+[2025-11-24 09:01:05] Key: h
+[2025-11-24 09:01:05] Key: j
+[2025-11-24 09:01:05] Key: b
+[2025-11-24 09:01:09] Key: j
+[2025-11-24 09:01:10] Key: b
+[2025-11-24 09:01:10] Key: h
+[2025-11-24 09:01:10] Key: y
+[2025-11-24 09:01:10] Key: n
+[2025-11-24 09:01:10] Key: j
+[2025-11-24 09:01:11] Key: j
+
+--- [WIN] Changed to: Google Gemini et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:33 ---
+hcghbbndjd
+--- [WIN] Changed to: Code keylogger non autorisé et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:39 ---
+hydghdj
+--- [WIN] Changed to: (2883) YouTube et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:44 ---
+jsnjddhj
+--- [WIN] Changed to: gemini - Search et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:50 ---
+aaaaa
+--- [WIN] Changed to: gemini - Search et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:20 ---
+ hsjdn  hdhd  dhdbhd
+--- [WIN] Changed to: Google Gemini et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:27 ---
+hdyhdh hdhydbd bbdhd
+--- [WIN] Changed to: Code keylogger non autorisé et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:35 ---
+hdyhdg hdgydb hhdhd   dhd
+--- [WIN] Changed to: (2883) YouTube et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:43 ---
+hdygdh bhdhhd

