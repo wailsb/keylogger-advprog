@@ -1,6 +1,11 @@
 
 
 import sys
+import os
+
+# Add parent directory to path so we can import libs
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 try:
     import PyInstaller.__main__ as pyinstaller
 except Exception:

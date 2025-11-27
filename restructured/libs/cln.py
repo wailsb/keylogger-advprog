@@ -1,6 +1,6 @@
 import grpc
-import protos.server_pb2 as keylog_pb2
-import protos.server_pb2_grpc as keylog_pb2_grpc
+from .protos import server_pb2 as keylog_pb2
+from .protos import server_pb2_grpc as keylog_pb2_grpc
 
 # CONNECT TO SERVER
 

