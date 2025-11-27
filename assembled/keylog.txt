@@ -88,3 +88,6 @@
 [2025-11-15 17:11:44] Key: d
 [2025-11-15 17:11:45] Key: s
 [2025-11-15 17:11:46] Special: Key.esc
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-27 09:43:47 ---
+[2025-11-27 09:43:47] Special: Key.esc
