@@ -270,10 +270,10 @@ I AM NOT RESPONSIBLE OF MISSUSE OF THIS TOOL ME OR MY TEAM ARE DOING IT JUST FOR
 
 ## authors
 made for advanced programming course project
-WAIL SARI BEY
-ANES ARGOUB
-INES ALLAG
-AMANI SAHRAOUI
+- WAIL SARI BEY
+- ANES ARGOUB
+- INES ALLAG
+- AMANI SAHRAOUI
 
 ## contact us suggestions help contribution
 thank you all for contribution suggestions or whatever just contact anyone of the contributers thank you
