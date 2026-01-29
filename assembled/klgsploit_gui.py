@@ -756,9 +756,9 @@ class KlgsploitGUI:
         threading.Thread(target=generate, daemon=True).start()
 
     def _classify_log(self):
-        """Classify emails and passwords from log file."""
+        """Classify emails and passwords using the enhanced classifier"""
         filepath = self.var_classify_file.get()
-        
+
         if not os.path.exists(filepath):
             self._show_error("File Not Found", f"File not found: {filepath}")
             return
@@ -767,49 +767,91 @@ class KlgsploitGUI:
         self.txt_classify_output.insert(END, f"[*] Analyzing: {filepath}\n\n")
 
         try:
+            # Import the new enhanced classifier
+            from classifier import EnhancedClassifier
+
+            # Read the file
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 text = f.read()
 
-            # Email regex
-            EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-            emails = EMAIL_RE.findall(text)
-            email_counts = Counter(emails)
+            # Create classifier (use_llm=True for AI, False for fast mode)
+            classifier = EnhancedClassifier(use_llm=True)
 
-            # Password patterns
-            PASSWORD_PATTERNS = [
-                re.compile(r"(?i)(?:password|passwd|pass|pwd|pw)\s*[:=]\s*['\"]?([^'\"\s,;]+)['\"]?"),
-            ]
-            passwords = []
-            for pat in PASSWORD_PATTERNS:
-                passwords.extend(pat.findall(text))
-            pw_counts = Counter(passwords)
+            # Optional: attach console observer to see alerts in terminal
+            # from classifier import ConsoleObserver
+            # classifier.attach(ConsoleObserver())
 
-            # Display results
+            # Run the analysis
+            result = classifier.classify_text(text)
+
+            # Display emails
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
-            self.txt_classify_output.insert(END, f"📧 EMAILS FOUND: {len(email_counts)}\n")
+            self.txt_classify_output.insert(END, f"📧 EMAILS FOUND: {len(result['emails'])}\n")
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
-            for email, count in email_counts.most_common(20):
-                self.txt_classify_output.insert(END, f"  [{count}x] {email}\n")
+            for item in result['emails'][:20]:  # Show top 20
+                self.txt_classify_output.insert(END, f"  [{item['count']}x] {item['value']}\n")
 
+            # Display passwords
             self.txt_classify_output.insert(END, "\n" + "=" * 50 + "\n")
-            self.txt_classify_output.insert(END, f"🔑 PASSWORD CANDIDATES: {len(pw_counts)}\n")
+            self.txt_classify_output.insert(END, f"🔑 PASSWORD CANDIDATES: {len(result['passwords'])}\n")
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
-            for pw, count in pw_counts.most_common(20):
-                self.txt_classify_output.insert(END, f"  [{count}x] {pw}\n")
+            for item in result['passwords'][:20]:  # Show top 20
+                self.txt_classify_output.insert(END, f"  [{item['count']}x] {item['value']}\n")
 
-            # Save to JSON
-            result = {
-                'emails': [{'value': v, 'count': c} for v, c in email_counts.most_common()],
-                'passwords': [{'value': v, 'count': c} for v, c in pw_counts.most_common()],
-            }
+            # Display additional sensitive data
+            sensitive = result['sensitive_data']
+            if sensitive['credit_cards'] or sensitive['ssns'] or sensitive['api_keys']:
+                self.txt_classify_output.insert(END, "\n" + "=" * 50 + "\n")
+                self.txt_classify_output.insert(END, "💳 ADDITIONAL SENSITIVE DATA\n")
+                self.txt_classify_output.insert(END, "=" * 50 + "\n")
+
+                if sensitive['credit_cards']:
+                    self.txt_classify_output.insert(END, f"Credit Cards: {len(sensitive['credit_cards'])}\n")
+                    for cc in sensitive['credit_cards'][:5]:
+                        self.txt_classify_output.insert(END, f"  - {cc}\n")
+
+                if sensitive['ssns']:
+                    self.txt_classify_output.insert(END, f"SSNs: {len(sensitive['ssns'])}\n")
+                    for ssn in sensitive['ssns'][:5]:
+                        self.txt_classify_output.insert(END, f"  - {ssn}\n")
+
+                if sensitive['api_keys']:
+                    self.txt_classify_output.insert(END, f"API Keys: {len(sensitive['api_keys'])}\n")
+                    for key in sensitive['api_keys'][:5]:
+                        self.txt_classify_output.insert(END, f"  - {key[:30]}...\n")
+
+            # Display criticality assessment if available
+            if result['criticality_assessment']:
+                crit = result['criticality_assessment']
+                self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
+                self.txt_classify_output.insert(END, "🎯 CRITICALITY ASSESSMENT\n")
+                self.txt_classify_output.insert(END, f"{'=' * 50}\n")
+                self.txt_classify_output.insert(END, f"Level: {crit['criticality_level']}\n")
+                self.txt_classify_output.insert(END, f"Confidence: {crit['confidence_score']:.0%}\n")
+                self.txt_classify_output.insert(END, f"Rule-Based Score: {crit['rule_based_score']:.2f}\n")
+                self.txt_classify_output.insert(END, f"AI Score: {crit['llm_score']:.2f}\n")
+                self.txt_classify_output.insert(END, f"AI Reasoning: {crit['llm_reasoning']}\n")
+
+                if crit['is_critical']:
+                    self.txt_classify_output.insert(END, "\n⚠️  CRITICAL DATA DETECTED!\n")
+
+            # Save detailed results to JSON
             output_path = filepath + '.classified.json'
             with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(result, f, indent=2)
+                json.dump(result, f, indent=2, ensure_ascii=False)
 
-            self.txt_classify_output.insert(END, f"\n[+] Results saved to: {output_path}\n")
+            self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
+            self.txt_classify_output.insert(END, f"[+] Detailed results saved to:\n")
+            self.txt_classify_output.insert(END, f"    {output_path}\n")
+            self.txt_classify_output.insert(END, f"[+] Alerts saved to: alerts.log\n")
 
+        except ImportError as e:
+            self.txt_classify_output.insert(END, f"\n[-] Import Error: {e}\n")
+            self.txt_classify_output.insert(END, "[!] Make sure classifier.py is in the same directory\n")
         except Exception as e:
-            self.txt_classify_output.insert(END, f"[-] Error: {e}\n")
+            self.txt_classify_output.insert(END, f"\n[-] Error: {e}\n")
+            import traceback
+            self.txt_classify_output.insert(END, f"\n{traceback.format_exc()}\n")
 
     def _refresh_log(self):
         """Refresh the log viewer."""

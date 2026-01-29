@@ -591,43 +591,59 @@ if __name__ == "__main__":
 
 
 def classify_logfile(filepath):
-    """Classify emails and passwords from a log file."""
-    import re
+    """Classify emails and passwords using the enhanced classifier"""
+    from classifier import EnhancedClassifier, ConsoleObserver, FileObserver
     import json
-    from collections import Counter
-
-    EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
-    PASSWORD_PATTERNS = [
-        re.compile(r"(?i)(?:password|passwd|pass|pwd|pw)\s*[:=]\s*['\"]?([^'\"\s,;]+)['\"]?"),
-    ]
 
     if not os.path.exists(filepath):
         print(f"[-] File not found: {filepath}")
         return
 
+    print(f"[*] Analyzing {filepath}...")
+
+    # Read the file
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
 
-    emails = EMAIL_RE.findall(text)
-    passwords = []
-    for pat in PASSWORD_PATTERNS:
-        passwords.extend(pat.findall(text))
+    # Create classifier with AI enabled (set to False for faster mode)
+    classifier = EnhancedClassifier(use_llm=True)
 
-    email_counts = Counter(emails)
-    pw_counts = Counter(passwords)
+    # Attach observers to get real-time alerts
+    classifier.attach(ConsoleObserver())
+    classifier.attach(FileObserver("alerts.log"))
 
-    result = {
-        'emails': [{'value': v, 'count': c} for v, c in email_counts.most_common()],
-        'passwords': [{'value': v, 'count': c} for v, c in pw_counts.most_common()],
-    }
+    # Run the analysis
+    result = classifier.classify_text(text)
 
+    # Save detailed JSON results
     output_path = filepath + '.classified.json'
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(result, f, indent=2)
+        json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"[+] Classification saved to: {output_path}")
-    print(f"[*] Found {len(email_counts)} unique emails")
-    print(f"[*] Found {len(pw_counts)} unique password candidates")
+    # Print summary to console
+    print(f"\n[+] Classification complete!")
+    print(f"[+] Results saved to: {output_path}")
+    print(f"\n{'=' * 50}")
+    print(f"SUMMARY")
+    print(f"{'=' * 50}")
+    print(f"Emails: {len(result['emails'])}")
+    print(f"Passwords: {len(result['passwords'])}")
+    print(f"Credit Cards: {len(result['sensitive_data']['credit_cards'])}")
+    print(f"SSNs: {len(result['sensitive_data']['ssns'])}")
+    print(f"API Keys: {len(result['sensitive_data']['api_keys'])}")
+
+    # Show criticality if AI was used
+    if result['criticality_assessment']:
+        crit = result['criticality_assessment']
+        print(f"\n{'=' * 50}")
+        print(f"CRITICALITY: {crit['criticality_level']}")
+        print(f"{'=' * 50}")
+        print(f"Confidence: {crit['confidence_score']:.0%}")
+        print(f"Rule Score: {crit['rule_based_score']:.2f}")
+        print(f"AI Score: {crit['llm_score']:.2f}")
+        print(f"AI Reasoning: {crit['llm_reasoning']}")
+
+    print(f"{'=' * 50}\n")
 
 
 def start_grpc_server(port):
