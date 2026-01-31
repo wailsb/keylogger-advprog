@@ -768,21 +768,28 @@ class KlgsploitGUI:
 
         try:
             # Import the new enhanced classifier
-            from classifier import EnhancedClassifier
+            from classifier import EnhancedClassifier, FileObserver
 
             # Read the file
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
                 text = f.read()
 
+            # Determine output path for JSON
+            output_path = filepath + '.classified.json'
+
             # Create classifier (use_llm=True for AI, False for fast mode)
             classifier = EnhancedClassifier(use_llm=True)
 
-            # Optional: attach console observer to see alerts in terminal
-            # from classifier import ConsoleObserver
-            # classifier.attach(ConsoleObserver())
+            # Attach FileObserver to capture alerts for JSON
+            file_observer = FileObserver(output_path)
+            classifier.attach(file_observer)
 
             # Run the analysis
             result = classifier.classify_text(text)
+
+            # Add observer alert data to result if exists
+            if file_observer.get_alert_data():
+                result['alert'] = file_observer.get_alert_data()
 
             # Display emails
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
@@ -835,15 +842,24 @@ class KlgsploitGUI:
                 if crit['is_critical']:
                     self.txt_classify_output.insert(END, "\n⚠️  CRITICAL DATA DETECTED!\n")
 
-            # Save detailed results to JSON
-            output_path = filepath + '.classified.json'
+            # Display alert info if present
+            if 'alert' in result:
+                alert = result['alert']
+                self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
+                self.txt_classify_output.insert(END, "🚨 ALERT TRIGGERED\n")
+                self.txt_classify_output.insert(END, f"{'=' * 50}\n")
+                self.txt_classify_output.insert(END, f"Type: {alert['alert_type']}\n")
+                self.txt_classify_output.insert(END, f"Time: {alert['alert_timestamp']}\n")
+
+            # Save detailed results to JSON (including alert if present)
             with open(output_path, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
 
             self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
             self.txt_classify_output.insert(END, f"[+] Detailed results saved to:\n")
             self.txt_classify_output.insert(END, f"    {output_path}\n")
-            self.txt_classify_output.insert(END, f"[+] Alerts saved to: alerts.log\n")
+            if 'alert' in result:
+                self.txt_classify_output.insert(END, f"[+] Alert data included in JSON file\n")
 
         except ImportError as e:
             self.txt_classify_output.insert(END, f"\n[-] Import Error: {e}\n")
