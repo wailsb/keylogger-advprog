@@ -1,0 +1,54 @@
+{
+  "emails": [],
+  "passwords": [
+    {
+      "value": "keylogger-advprog",
+      "count": 7
+    },
+    {
+      "value": "klgsploit.py",
+      "count": 6
+    },
+    {
+      "value": "Personnel",
+      "count": 3
+    },
+    {
+      "value": "Microsoft",
+      "count": 3
+    },
+    {
+      "value": "Documents/tpPy",
+      "count": 2
+    },
+    {
+      "value": "operating",
+      "count": 1
+    },
+    {
+      "value": "identify",
+      "count": 1
+    },
+    {
+      "value": "Overflow",
+      "count": 1
+    },
+    {
+      "value": "Différences",
+      "count": 1
+    }
+  ],
+  "sensitive_data": {
+    "credit_cards": [],
+    "ssns": [],
+    "api_keys": []
+  },
+  "criticality_assessment": {
+    "criticality_level": "LOW",
+    "confidence_score": 0.24,
+    "rule_based_score": 0.4,
+    "llm_score": 0.0,
+    "llm_reasoning": "AI not available",
+    "is_critical": false
+  }
+}
