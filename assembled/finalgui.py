@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-
-
 import os
 import sys
 import threading
@@ -53,6 +51,7 @@ try:
     HAS_MSS = True
 except ImportError:
     HAS_MSS = False
+
 
 COLORS = {
     # Backgrounds
@@ -220,7 +219,6 @@ class KlgsploitGUI:
         return 'lnx'
 
     def _configure_styles(self):
-       
         style = ttk.Style()
         
         # Frame styles
@@ -238,7 +236,6 @@ class KlgsploitGUI:
                        font=('Segoe UI', 10))
 
     def _build_ui(self):
-       
         
         # === HEADER MODERNE ===
         header = ttk.Frame(self.app, height=80)
@@ -264,13 +261,7 @@ class KlgsploitGUI:
             background=COLORS['bg_dark']
         ).pack(side=LEFT)
         
-        ttk.Label(
-            title_frame,
-            text="Dashboard",
-            font=('Segoe UI', 20),
-            foreground=COLORS['text_secondary'],
-            background=COLORS['bg_dark']
-        ).pack(side=LEFT, padx=(10,0))
+        
         
         # Statut à droite
         status_frame = ttk.Frame(header_content)
@@ -317,7 +308,6 @@ class KlgsploitGUI:
         self._build_grpc_tab()
 
     def _build_dashboard_tab(self):
-       
         tab = ttk.Frame(self.notebook)
         tab.configure(style='Dark.TFrame')
         self.notebook.add(tab, text="  📊 DASHBOARD  ")
@@ -1767,7 +1757,6 @@ listener.join()
             import traceback
             self.txt_classify_output.insert(END, f"\n{traceback.format_exc()}\n")
 
-
     def _basic_classify(self, filepath):
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             text = f.read()
@@ -1876,10 +1865,8 @@ listener.join()
 # Main entry point
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("🔐 KEYLOGGER - ")
+    print("🔐 Keylogger ")
     print("=" * 70)
-    print("Toutes les fonctionnalités + ")
-    print("Palette: Bleu marine / Cyan électrique")
     print("=" * 70 + "\n")
     
     app = KlgsploitGUI()
