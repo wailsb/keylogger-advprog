@@ -46,30 +46,24 @@ class Observer(ABC):
         pass
 
 
-class ConsoleObserver(Observer):
-    """Prints alerts to the console"""
-
-    def update(self, event_type: str, data: Dict[str, Any]):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n{'=' * 60}")
-        print(f"🚨 ALERT [{timestamp}] - {event_type}")
-        print(f"{'=' * 60}")
-        for key, value in data.items():
-            print(f"  {key}: {value}")
-        print(f"{'=' * 60}\n")
-
-
 class FileObserver(Observer):
-    """Saves alerts to a log file"""
+    """Saves alerts directly into the JSON output file"""
 
-    def __init__(self, filepath: str = "alerts.log"):
-        self.filepath = filepath
+    def __init__(self, json_filepath: str):
+        self.json_filepath = json_filepath
+        self.alert_data = None
 
     def update(self, event_type: str, data: Dict[str, Any]):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(self.filepath, 'a', encoding='utf-8') as f:
-            f.write(f"\n[{timestamp}] ALERT: {event_type}\n")
-            f.write(json.dumps(data, indent=2) + "\n")
+        """Store alert data to be added to JSON"""
+        self.alert_data = {
+            "alert_triggered": True,
+            "alert_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "alert_type": event_type,
+        }
+
+    def get_alert_data(self):
+        """Retrieve the stored alert data"""
+        return self.alert_data
 
 
 class Subject:
@@ -185,7 +179,7 @@ class CriticalityAnalyzer:
         try:
             from transformers import pipeline
 
-            print("[*] Loading AI model (first time takes ~1 minute)...")
+            #print("[*] Loading AI model (first time takes ~1 minute)...")
 
             # Load a lightweight model that detects positive/negative sentiment
             # We use this to detect if text "sounds" dangerous or not
@@ -195,13 +189,13 @@ class CriticalityAnalyzer:
                 device=-1  # Use CPU
             )
 
-            print("[+] Model ready!")
+            #print("[+] Model ready!")
 
         except ImportError:
-            print("[!] AI model not available (install: pip install transformers torch)")
+            #print("[!] AI model not available (install: pip install transformers torch)")
             self.model = None
         except Exception as e:
-            print(f"[!] Could not load model: {e}")
+            #print(f"[!] Could not load model: {e}")
             self.model = None
 
     def analyze_criticality(self, text_sample: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -368,7 +362,6 @@ class EnhancedClassifier(Subject):
             'criticality_assessment': criticality
         }
 
-
 # ============================================================================
 # SIMPLE FUNCTION FOR BACKWARDS COMPATIBILITY
 # ============================================================================
@@ -408,35 +401,29 @@ def main():
 
     # Read input file
     if not os.path.isfile(args.input):
-        print(f"Error: File not found: {args.input}")
         sys.exit(1)
 
     with open(args.input, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
 
-    # Create classifier and attach observers
+    # Determine output path
+    out_path = args.out or (args.input + '.classified.json')
+
+    # Create classifier and attach FileObserver
     classifier = EnhancedClassifier(use_llm=not args.no_llm)
-    classifier.attach(ConsoleObserver())
-    classifier.attach(FileObserver("alerts.log"))
+    file_observer = FileObserver(out_path)
+    classifier.attach(file_observer)
 
     # Analyze
-    print(f"[*] Analyzing {args.input}...")
     result = classifier.classify_text(text)
 
-    # Save results
-    out_path = args.out or (args.input + '.classified.json')
+    # Add observer alert data to result if exists
+    if file_observer.get_alert_data():
+        result['alert'] = file_observer.get_alert_data()
+
+    # Save results to JSON
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-
-    print(f"[+] Results saved to: {out_path}")
-    print(f"\nFound:")
-    print(f"  - {len(result['emails'])} emails")
-    print(f"  - {len(result['passwords'])} passwords")
-    print(f"  - {len(result['sensitive_data']['credit_cards'])} credit cards")
-
-    if result['criticality_assessment']:
-        crit = result['criticality_assessment']
-        print(f"\nCriticality: {crit['criticality_level']} ({crit['confidence_score']:.0%})")
 
 
 if __name__ == '__main__':

