@@ -1,0 +1,93 @@
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-14 10:28:49 ---
+[2025-11-14 10:28:49] Special: Key.space
+[2025-11-14 10:28:50] Special: Key.space
+[2025-11-14 10:28:50] Key: v
+[2025-11-14 10:28:51] Key: v
+[2025-11-14 10:28:51] Key: g
+[2025-11-14 10:28:51] Key: g
+[2025-11-14 10:28:52] Key: d
+[2025-11-14 10:28:53] Key: h
+[2025-11-14 10:28:53] Key: f
+[2025-11-14 10:28:53] Key: b
+[2025-11-14 10:28:53] Key: b
+[2025-11-14 10:28:53] Key: d
+[2025-11-14 10:28:54] Key: k
+[2025-11-14 10:28:54] Key: d
+[2025-11-14 10:28:59] Special: Key.backspace
+[2025-11-14 10:29:00] Special: Key.cmd
+[2025-11-14 10:29:00] Special: Key.shift
+[2025-11-14 10:29:00] Key: 3
+
+--- Window changed to: [htop] at 2025-11-14 10:29:01 ---
+[2025-11-14 10:29:01] Key: 2
+[2025-11-14 10:29:02] Special: Key.shift
+[2025-11-14 10:29:02] Special: Key.cmd
+[2025-11-14 10:29:03] Special: Key.shift
+[2025-11-14 10:29:03] Special: Key.cmd
+
+--- Window changed to: [python folder as module content of init py - Google Search — Mozilla Firefox] at 2025-11-14 10:29:04 ---
+[2025-11-14 10:29:04] Key: 1
+[2025-11-14 10:29:08] Special: Key.shift
+[2025-11-14 10:29:08] Special: Key.cmd
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-14 10:29:09 ---
+[2025-11-14 10:29:09] Key: 3
+[2025-11-14 10:29:10] Special: Key.shift
+[2025-11-14 10:29:10] Special: Key.cmd
+
+--- Window changed to: [htop] at 2025-11-14 10:29:11 ---
+[2025-11-14 10:29:11] Key: 2
+
+--- Window changed to: [~/Documents/tpPy] at 2025-11-14 10:29:13 ---
+[2025-11-14 10:29:13] Key: h
+[2025-11-14 10:29:13] Key: g
+[2025-11-14 10:29:13] Key: h
+[2025-11-14 10:29:13] Key: h
+[2025-11-14 10:29:13] Key: g
+[2025-11-14 10:29:13] Special: Key.cmd
+[2025-11-14 10:29:13] Special: Key.shift
+
+--- Window changed to: [python folder as module content of init py - Google Search — Mozilla Firefox] at 2025-11-14 10:29:14 ---
+[2025-11-14 10:29:14] Key: 1
+
+--- Window changed to: [operating system - How to identify which OS Python is running on - Stack Overflow — Mozilla Firefox] at 2025-11-14 10:29:16 ---
+[2025-11-14 10:29:16] Key: r
+[2025-11-14 10:29:16] Key: h
+[2025-11-14 10:29:17] Key: h
+[2025-11-14 10:29:17] Key: f
+[2025-11-14 10:29:17] Special: Key.cmd
+[2025-11-14 10:29:17] Special: Key.shift
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-14 10:29:18 ---
+[2025-11-14 10:29:18] Key: 3
+
+--- Window changed to: [~/Documents/tpPy] at 2025-11-14 10:29:18 ---
+[2025-11-14 10:29:18] Key: 2
+
+--- Window changed to: [htop] at 2025-11-14 10:29:28 ---
+[2025-11-14 10:29:28] Special: Key.shift
+[2025-11-14 10:29:28] Special: Key.cmd
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-14 10:29:28 ---
+[2025-11-14 10:29:28] Key: 3
+
+--- Window changed to: [htop] at 2025-11-14 10:29:28 ---
+[2025-11-14 10:29:28] Key: 2
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-14 10:29:29 ---
+[2025-11-14 10:29:29] Key: 3
+[2025-11-14 10:29:31] Special: Key.esc
+
+--- Window changed to: [cln.py - keylogger-advprog - Visual Studio Code] at 2025-11-15 17:11:37 ---
+[2025-11-15 17:11:37] Key: d
+[2025-11-15 17:11:39] Key: g
+[2025-11-15 17:11:41] Key: s
+[2025-11-15 17:11:42] Key: f
+[2025-11-15 17:11:42] Key: f
+[2025-11-15 17:11:44] Key: d
+[2025-11-15 17:11:45] Key: s
+[2025-11-15 17:11:46] Special: Key.esc
+
+--- Window changed to: [klgsploit.py - keylogger-advprog - Visual Studio Code] at 2025-11-27 09:43:47 ---
+[2025-11-27 09:43:47] Special: Key.esc

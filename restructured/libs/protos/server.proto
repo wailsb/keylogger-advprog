@@ -1,0 +1,10 @@
+syntax = "proto3";
+message KeylogRequest {
+  string message = 1;
+}
+message KeylogResponse {
+  bool response = 1;
+}
+service KeylogService {
+  rpc SendKeylog (KeylogRequest) returns (KeylogResponse);
+}

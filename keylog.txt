@@ -1,8 +1,264 @@
-[2025-10-04 22:41:42] Key: s
-[2025-10-04 22:41:44] Special: Key.backspace
-[2025-10-04 22:41:46] Key: s
-[2025-10-04 22:41:47] Special: Key.backspace
-[2025-10-04 22:41:49] Key: s
-[2025-10-04 22:41:50] Key: s
-[2025-10-04 22:41:50] Key: q
-[2025-10-04 22:41:54] Special: Key.esc
+
+--- Window changed to: [Desktop] at 2025-11-22 16:09:14 ---
+[2025-11-22 16:09:14] Key: h
+[2025-11-22 16:09:14] Key: d
+[2025-11-22 16:09:15] Key: v
+[2025-11-22 16:09:15] Key: b
+[2025-11-22 16:09:15] Key: c
+[2025-11-22 16:09:15] Key: h
+[2025-11-22 16:09:15] Key: s
+[2025-11-22 16:09:15] Key: j
+[2025-11-22 16:09:26] Key: a
+[2025-11-22 16:09:26] Key: m
+[2025-11-22 16:09:26] Key: a
+[2025-11-22 16:09:27] Key: n
+[2025-11-22 16:09:27] Key: i
+[2025-11-22 16:09:27] Key: s
+[2025-11-22 16:09:27] Key: a
+[2025-11-22 16:09:27] Key: h
+[2025-11-22 16:09:27] Key: r
+[2025-11-22 16:09:28] Key: a
+[2025-11-22 16:09:28] Key: o
+[2025-11-22 16:09:28] Key: u
+[2025-11-22 16:09:28] Key: i
+[2025-11-22 16:09:28] Key: 8
+[2025-11-22 16:09:30] Special: Key.shift
+[2025-11-22 16:09:30] Key: @
+[2025-11-22 16:09:31] Key: g
+[2025-11-22 16:09:31] Key: m
+[2025-11-22 16:09:31] Key: a
+[2025-11-22 16:09:31] Key: i
+[2025-11-22 16:09:32] Key: l
+[2025-11-22 16:09:32] Key: .
+[2025-11-22 16:09:32] Key: c
+[2025-11-22 16:09:32] Key: o
+[2025-11-22 16:09:33] Key: m
+
+--- Window changed to: [Desktop] at 2025-11-24 08:24:52 ---
+[2025-11-24 08:24:52] Key: c
+[2025-11-24 08:24:52] Key: h
+[2025-11-24 08:24:53] Key: d
+[2025-11-24 08:24:53] Key: g
+[2025-11-24 08:24:53] Key: r
+[2025-11-24 08:24:53] Key: b
+[2025-11-24 08:24:53] Key: h
+[2025-11-24 08:24:54] Key: k
+[2025-11-24 08:24:54] Key: k
+[2025-11-24 08:24:54] Key: l
+[2025-11-24 08:25:24] Key: h
+[2025-11-24 08:25:24] Key: g
+[2025-11-24 08:25:24] Key: d
+[2025-11-24 08:25:24] Key: y
+[2025-11-24 08:25:24] Key: h
+[2025-11-24 08:25:24] Key: d
+[2025-11-24 08:25:25] Key: h
+[2025-11-24 08:25:25] Key: h
+[2025-11-24 08:25:25] Key: d
+
+--- Window changed to: [(2883) YouTube - Personnel – Microsoft​ Edge] at 2025-11-24 08:34:43 ---
+[2025-11-24 08:34:43] Key: y
+[2025-11-24 08:34:43] Key: g
+[2025-11-24 08:34:44] Key: v
+[2025-11-24 08:34:44] Key: j
+[2025-11-24 08:34:44] Key: v
+[2025-11-24 08:34:45] Key: v
+[2025-11-24 08:34:45] Key: g
+[2025-11-24 08:34:45] Key: j
+[2025-11-24 08:34:45] Key: v
+[2025-11-24 08:34:46] Key: v
+
+--- Window changed to: [Nouvel onglet et 1 page supplémentaire - Personnel – Microsoft​ Edge] at 2025-11-24 08:34:57 ---
+[2025-11-24 08:34:57] Key: k
+[2025-11-24 08:34:58] Key: m
+[2025-11-24 08:34:58] Key: k
+[2025-11-24 08:34:58] Key: m
+[2025-11-24 08:34:58] Key: k
+[2025-11-24 08:34:59] Key: m
+[2025-11-24 08:34:59] Key: k
+[2025-11-24 08:34:59] Key: k
+
+--- Window changed to: [Nouvel onglet et 2 pages de plus - Personnel – Microsoft​ Edge] at 2025-11-24 08:35:02 ---
+[2025-11-24 08:35:02] Key: c
+[2025-11-24 08:35:02] Key: h
+[2025-11-24 08:35:03] Special: Key.backspace
+[2025-11-24 08:35:05] Special: Key.down
+[2025-11-24 08:35:05] Special: Key.enter
+
+--- Window changed to: [ChatGPT et 2 pages de plus - Personnel – Microsoft​ Edge] at 2025-11-24 08:35:08 ---
+[2025-11-24 08:35:08] Key: k
+[2025-11-24 08:35:09] Key: j
+[2025-11-24 08:35:09] Key: k
+[2025-11-24 08:35:09] Key: j
+[2025-11-24 08:35:09] Key: k
+[2025-11-24 08:35:09] Key: j
+[2025-11-24 08:35:09] Key: j
+
+--- Window changed to: [keylogwin.py - keylogger-advprog - Visual Studio Code] at 2025-11-24 08:35:14 ---
+[2025-11-24 08:35:14] Special: Key.esc
+
+--- Window changed to: [Desktop] at 2025-11-24 08:42:53 ---
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:53] Special: Key.backspace
+[2025-11-24 08:42:54] Special: Key.backspace
+[2025-11-24 08:42:54] Special: Key.backspace
+[2025-11-24 08:42:54] Special: Key.backspace
+[2025-11-24 08:42:54] Key: h
+[2025-11-24 08:42:54] Key: y
+[2025-11-24 08:42:54] Key: g
+[2025-11-24 08:42:55] Key: h
+[2025-11-24 08:42:55] Key: n
+[2025-11-24 08:42:55] Key: l
+[2025-11-24 08:42:55] Key: l
+[2025-11-24 08:42:56] Key: l
+[2025-11-24 08:42:56] Special: Key.space
+[2025-11-24 08:42:57] Special: Key.shift
+[2025-11-24 08:42:58] Key: @
+[2025-11-24 08:42:58] Special: Key.space
+[2025-11-24 08:42:58] Key: h
+[2025-11-24 08:42:59] Key: n
+[2025-11-24 08:42:59] Key: s
+[2025-11-24 08:42:59] Key: k
+[2025-11-24 08:42:59] Key: l
+[2025-11-24 08:42:59] Key: s
+[2025-11-24 08:43:00] Key: .
+[2025-11-24 08:43:00] Key: h
+[2025-11-24 08:43:01] Key: s
+[2025-11-24 08:43:01] Key: h
+[2025-11-24 08:43:01] Key: s
+[2025-11-24 08:43:01] Key: b
+[2025-11-24 08:43:04] Key: g
+[2025-11-24 08:43:05] Key: h
+[2025-11-24 08:43:05] Key: e
+[2025-11-24 08:43:05] Key: u
+[2025-11-24 08:43:05] Key: y
+[2025-11-24 08:43:05] Key: w
+[2025-11-24 08:43:05] Key: h
+[2025-11-24 08:43:05] Key: j
+[2025-11-24 08:43:05] Key: k
+[2025-11-24 08:43:06] Key: w
+[2025-11-24 08:43:06] Special: Key.space
+[2025-11-24 08:43:06] Key: x
+[2025-11-24 08:43:10] Key: h
+[2025-11-24 08:43:10] Key: d
+[2025-11-24 08:43:10] Key: b
+[2025-11-24 08:43:11] Key: j
+[2025-11-24 08:43:11] Key: s
+[2025-11-24 08:43:11] Key: j
+[2025-11-24 08:43:11] Key: s
+[2025-11-24 08:43:11] Key: w
+
+--- Window changed to: [ChatGPT et 3 pages de plus - Personnel – Microsoft​ Edge] at 2025-11-24 08:44:10 ---
+[2025-11-24 08:44:10] Special: Key.space
+[2025-11-24 08:44:11] Key: j
+[2025-11-24 08:44:11] Key: m
+[2025-11-24 08:44:11] Key: j
+[2025-11-24 08:44:11] Key: j
+[2025-11-24 08:44:11] Key: n
+[2025-11-24 08:44:11] Key: j
+[2025-11-24 08:44:11] Key: n
+[2025-11-24 08:44:11] Key: j
+[2025-11-24 08:44:11] Key: n
+
+--- Window changed to: [keylogtest.py - keylogger-advprog - Visual Studio Code] at 2025-11-24 08:44:15 ---
+[2025-11-24 08:44:15] Special: Key.esc
+
+--- Window changed to: [Desktop] at 2025-11-24 08:55:01 ---
+[2025-11-24 08:55:01] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:02] Special: Key.backspace
+[2025-11-24 08:55:03] Key: h
+[2025-11-24 08:55:03] Key: y
+[2025-11-24 08:55:03] Key: g
+[2025-11-24 08:55:03] Key: h
+[2025-11-24 08:55:03] Key: b
+[2025-11-24 08:55:04] Key: l
+[2025-11-24 08:55:04] Key: k
+[2025-11-24 08:55:04] Key: k
+[2025-11-24 08:55:04] Key: k
+[2025-11-24 08:55:08] Key: c
+[2025-11-24 08:55:08] Key: v
+[2025-11-24 08:55:08] Key: h
+[2025-11-24 08:55:08] Key: g
+[2025-11-24 08:55:09] Key: h
+[2025-11-24 08:55:09] Key: j
+[2025-11-24 08:55:09] Key: j
+[2025-11-24 08:55:13] Key: h
+[2025-11-24 08:55:13] Key: v
+[2025-11-24 08:55:13] Key: b
+[2025-11-24 08:55:14] Key: h
+[2025-11-24 08:55:14] Key: j
+[2025-11-24 08:55:14] Key: j
+[2025-11-24 08:55:14] Key: k
+
+--- Window changed to: [Desktop] at 2025-11-24 09:00:59 ---
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: v
+[2025-11-24 09:00:59] Key: g
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:00:59] Key: h
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:03] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Special: Key.backspace
+[2025-11-24 09:01:04] Key: h
+[2025-11-24 09:01:04] Key: u
+[2025-11-24 09:01:04] Key: j
+[2025-11-24 09:01:05] Key: y
+[2025-11-24 09:01:05] Key: t
+[2025-11-24 09:01:05] Key: h
+[2025-11-24 09:01:05] Key: j
+[2025-11-24 09:01:05] Key: b
+[2025-11-24 09:01:09] Key: j
+[2025-11-24 09:01:10] Key: b
+[2025-11-24 09:01:10] Key: h
+[2025-11-24 09:01:10] Key: y
+[2025-11-24 09:01:10] Key: n
+[2025-11-24 09:01:10] Key: j
+[2025-11-24 09:01:11] Key: j
+
+--- [WIN] Changed to: Google Gemini et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:33 ---
+hcghbbndjd
+--- [WIN] Changed to: Code keylogger non autorisé et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:39 ---
+hydghdj
+--- [WIN] Changed to: (2883) YouTube et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:44 ---
+jsnjddhj
+--- [WIN] Changed to: gemini - Search et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:15:50 ---
+aaaaa
+--- [WIN] Changed to: gemini - Search et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:20 ---
+ hsjdn  hdhd  dhdbhd
+--- [WIN] Changed to: Google Gemini et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:27 ---
+hdyhdh hdhydbd bbdhd
+--- [WIN] Changed to: Code keylogger non autorisé et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:35 ---
+hdyhdg hdgydb hhdhd   dhd
+--- [WIN] Changed to: (2883) YouTube et 4 pages de plus - Personnel – Microsoft​ Edge at 2025-11-24 09:16:43 ---
+hdygdh bhdhhd

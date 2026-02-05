@@ -21,6 +21,7 @@ Examples:
 For more information, visit: https://github.com/yourrepo/keylogger-advprog
 '''
 )
+# grpc
 argsstr = ' '.join(sys.argv[1:])
 
 argslist = [arg.strip() for arg in argsstr.split('--') if arg.strip()]
