@@ -1057,6 +1057,7 @@ class KlgsploitGUI:
 
         row2 = ttk.Frame(input_inner)
         row2.configure(style='Card.TFrame')
+
         row2.pack(fill=X, pady=10)
         ttk.Button(row2, text="🔍 Classify Emails & Passwords", command=self._classify_log,
                    bootstyle="primary", width=30).pack()
@@ -1646,7 +1647,6 @@ listener.join()
     def _classify_log(self):
         """Classify emails and passwords using the enhanced classifier"""
         filepath = self.var_classify_file.get()
-
         if not os.path.exists(filepath):
             self._show_error("File Not Found", f"File not found: {filepath}")
             return
@@ -1684,14 +1684,14 @@ listener.join()
             self.txt_classify_output.insert(END, f"📧 EMAILS FOUND: {len(result['emails'])}\n")
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
             for item in result['emails'][:20]:  # Show top 20
-                self.txt_classify_output.insert(END, f"  [{item['count']}x] {item['value']}\n")
+                self.txt_classify_output.insert(END, f" [{item['count']}x] {item['value']}\n")
 
             # Display passwords
             self.txt_classify_output.insert(END, "\n" + "=" * 50 + "\n")
             self.txt_classify_output.insert(END, f"🔑 PASSWORD CANDIDATES: {len(result['passwords'])}\n")
             self.txt_classify_output.insert(END, "=" * 50 + "\n")
             for item in result['passwords'][:20]:  # Show top 20
-                self.txt_classify_output.insert(END, f"  [{item['count']}x] {item['value']}\n")
+                self.txt_classify_output.insert(END, f" [{item['count']}x] {item['value']}\n")
 
             # Display additional sensitive data
             sensitive = result['sensitive_data']
@@ -1699,36 +1699,40 @@ listener.join()
                 self.txt_classify_output.insert(END, "\n" + "=" * 50 + "\n")
                 self.txt_classify_output.insert(END, "💳 ADDITIONAL SENSITIVE DATA\n")
                 self.txt_classify_output.insert(END, "=" * 50 + "\n")
-
                 if sensitive['credit_cards']:
                     self.txt_classify_output.insert(END, f"Credit Cards: {len(sensitive['credit_cards'])}\n")
                     for cc in sensitive['credit_cards'][:5]:
-                        self.txt_classify_output.insert(END, f"  - {cc}\n")
-
+                        self.txt_classify_output.insert(END, f" - {cc}\n")
                 if sensitive['ssns']:
                     self.txt_classify_output.insert(END, f"SSNs: {len(sensitive['ssns'])}\n")
                     for ssn in sensitive['ssns'][:5]:
-                        self.txt_classify_output.insert(END, f"  - {ssn}\n")
-
+                        self.txt_classify_output.insert(END, f" - {ssn}\n")
                 if sensitive['api_keys']:
                     self.txt_classify_output.insert(END, f"API Keys: {len(sensitive['api_keys'])}\n")
                     for key in sensitive['api_keys'][:5]:
-                        self.txt_classify_output.insert(END, f"  - {key[:30]}...\n")
+                        self.txt_classify_output.insert(END, f" - {key[:30]}...\n")
 
-            # Display criticality assessment if available
+            # Display criticality assessment if available (using NEW keys from classifier)
             if result['criticality_assessment']:
                 crit = result['criticality_assessment']
                 self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
                 self.txt_classify_output.insert(END, "🎯 CRITICALITY ASSESSMENT\n")
                 self.txt_classify_output.insert(END, f"{'=' * 50}\n")
-                self.txt_classify_output.insert(END, f"Level: {crit['criticality_level']}\n")
-                self.txt_classify_output.insert(END, f"Confidence: {crit['confidence_score']:.0%}\n")
-                self.txt_classify_output.insert(END, f"Rule-Based Score: {crit['rule_based_score']:.2f}\n")
-                self.txt_classify_output.insert(END, f"AI Score: {crit['llm_score']:.2f}\n")
-                self.txt_classify_output.insert(END, f"AI Reasoning: {crit['llm_reasoning']}\n")
+
+                # Final combined score first
+                self.txt_classify_output.insert(END,
+                                                f"Final Risk Level: {crit['criticality_level']} ({crit['final_risk_score']:.0%})\n")
+
+                # Breakdown using the renamed keys
+                self.txt_classify_output.insert(END, "Breakdown:\n")
+                self.txt_classify_output.insert(END, f"• Rules-based danger: {crit['rules_danger']:.0%}\n")
+                self.txt_classify_output.insert(END, f"• AI suspicion: {crit['ai_suspicion']:.0%}\n")
+
+                # Reasoning
+                self.txt_classify_output.insert(END, f"Reason: {crit['ai_reasoning']}\n")
 
                 if crit['is_critical']:
-                    self.txt_classify_output.insert(END, "\n⚠️  CRITICAL DATA DETECTED!\n")
+                    self.txt_classify_output.insert(END, "\n⚠️ CRITICAL DATA DETECTED!\n")
 
             # Display alert info if present
             if 'alert' in result:
@@ -1745,7 +1749,7 @@ listener.join()
 
             self.txt_classify_output.insert(END, f"\n{'=' * 50}\n")
             self.txt_classify_output.insert(END, f"[+] Detailed results saved to:\n")
-            self.txt_classify_output.insert(END, f"    {output_path}\n")
+            self.txt_classify_output.insert(END, f" {output_path}\n")
             if 'alert' in result:
                 self.txt_classify_output.insert(END, f"[+] Alert data included in JSON file\n")
 

