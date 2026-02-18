@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['C:\\Users\\amani\\AppData\\Local\\Temp\\klg_adv_temp_win.py'],
+    ['C:\\Users\\pc\\AppData\\Local\\Temp\\klg_adv_temp_win.py'],
     pathex=[],
     binaries=[],
     datas=[],

