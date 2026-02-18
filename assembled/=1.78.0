@@ -1,0 +1,2 @@
+Requirement already satisfied: grpcio in /home/pengux8/Documents/DigitKomProjects/keylogger-advprog/venv/lib/python3.13/site-packages (1.76.0)
+Requirement already satisfied: typing-extensions~=4.12 in /home/pengux8/Documents/DigitKomProjects/keylogger-advprog/venv/lib/python3.13/site-packages (from grpcio) (4.15.0)

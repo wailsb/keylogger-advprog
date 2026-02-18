@@ -1,0 +1,42 @@
+{
+  "emails": [
+    {
+      "value": "sisi@gmail.cossn",
+      "count": 1
+    },
+    {
+      "value": "nesallag91@gmail.com",
+      "count": 1
+    }
+  ],
+  "passwords": [
+    {
+      "value": "poutchy#11132pwd:ines2005",
+      "count": 1
+    },
+    {
+      "value": "Poutchy#118",
+      "count": 1
+    }
+  ],
+  "sensitive_data": {
+    "credit_cards": [
+      "1234-5876-3456-9876"
+    ],
+    "ssns": [
+      "123-45-6789",
+      "123-67-3456"
+    ],
+    "api_keys": [
+      "my_secret_key_super_secret12password:poutchy#11132pwd:ines2005\"sisi345\"cc:1234-5876-3456-9876"
+    ]
+  },
+  "criticality_assessment": {
+    "criticality_level": "HIGH",
+    "final_risk_score": 0.6,
+    "rules_danger": 1.0,
+    "ai_suspicion": 0.0,
+    "ai_reasoning": "AI not available",
+    "is_critical": false
+  }
+}

