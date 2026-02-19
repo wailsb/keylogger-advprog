@@ -2,11 +2,11 @@
 
 
 a = Analysis(
-    ['/tmp/klg_temp_win.py'],
+    ['/tmp/klg_adv_temp_lnx.py'],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=['grpc', 'grpc._channel'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
