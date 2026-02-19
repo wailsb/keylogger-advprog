@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['/tmp/klg_adv_temp_win.py'],
+    ['/tmp/klg_adv_temp_lnx.py'],
     pathex=[],
     binaries=[],
     datas=[],
